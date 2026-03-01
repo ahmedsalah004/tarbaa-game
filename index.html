@@ -76,6 +76,47 @@
       flex-wrap: wrap;
     }
 
+    .status-row {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--text);
+    }
+
+    .turn-indicator {
+      font-weight: 800;
+      color: var(--accent-2);
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+
+    .timer-settings {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 10px;
+      padding: 6px 10px;
+    }
+
+    .timer-settings button {
+      padding: 4px 10px;
+      background: linear-gradient(140deg, #334155, #1e293b);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+    }
+
+    .timer-settings span {
+      font-weight: 700;
+      min-width: 110px;
+      text-align: center;
+    }
+
     .team-card {
       background: linear-gradient(160deg, #1e293b 8%, #0b1226 100%);
       border: 1px solid rgba(148, 163, 184, 0.2);
@@ -312,6 +353,12 @@
       padding-top: 12px;
     }
 
+    .timer-display {
+      font-weight: 900;
+      color: var(--accent-2);
+      font-size: 1.1rem;
+    }
+
     .dialog-actions {
       display: flex;
       flex-wrap: wrap;
@@ -361,6 +408,14 @@
       <div class="scoreboard" id="scoreboard"></div>
       <button class="reset" id="newGameBtn">لعبة جديدة</button>
       <button class="reset" id="resetBtn">إعادة ضبط النقاط</button>
+      <div class="status-row">
+        <div class="turn-indicator" id="turnIndicator">الدور: الفريق 1</div>
+        <div class="timer-settings">
+          <button id="timerPlusBtn" aria-label="زيادة وقت المؤقت">+</button>
+          <span id="timerSettingLabel">الوقت: 15 ثانية</span>
+          <button id="timerMinusBtn" aria-label="تقليل وقت المؤقت">-</button>
+        </div>
+      </div>
     </div>
 
     <div class="board" id="board"></div>
@@ -371,11 +426,14 @@
     <div class="dialog">
       <h2 id="modalTitle"></h2>
       <p class="question" id="questionText"></p>
+      <p class="timer-display" id="timerDisplay">الوقت المتبقي: 15 ثانية</p>
       <p class="answer" id="answerText"></p>
       <div class="dialog-actions">
         <button class="primary" id="showAnswerBtn">إظهار الإجابة</button>
-        <button class="award" id="awardTeam1">احتساب للفريق الأول</button>
-        <button class="award" id="awardTeam2">احتساب للفريق الثاني</button>
+        <button class="award" id="correctBtn" hidden>صحيح</button>
+        <button class="subtract" id="wrongBtn" hidden>خطأ</button>
+        <button class="award" id="stealBtn" hidden>سرقة للفريق الآخر</button>
+        <button class="secondary" id="skipStealBtn" hidden>بدون سرقة</button>
         <button class="secondary" id="closeBtn">إغلاق</button>
       </div>
     </div>
@@ -533,6 +591,9 @@
       { id: 0, name: "الفريق الأول", score: 0 },
       { id: 1, name: "الفريق الثاني", score: 0 }
     ];
+    const STEAL_POINTS_MULTIPLIER = 1;
+    const MIN_TIMER_SECONDS = 5;
+    const MAX_TIMER_SECONDS = 60;
 
     const boardEl = document.getElementById("board");
     const scoreboardEl = document.getElementById("scoreboard");
@@ -540,18 +601,29 @@
     const modalTitle = document.getElementById("modalTitle");
     const questionText = document.getElementById("questionText");
     const answerText = document.getElementById("answerText");
+    const timerDisplay = document.getElementById("timerDisplay");
     const showAnswerBtn = document.getElementById("showAnswerBtn");
     const closeBtn = document.getElementById("closeBtn");
-    const awardTeam1 = document.getElementById("awardTeam1");
-    const awardTeam2 = document.getElementById("awardTeam2");
+    const correctBtn = document.getElementById("correctBtn");
+    const wrongBtn = document.getElementById("wrongBtn");
+    const stealBtn = document.getElementById("stealBtn");
+    const skipStealBtn = document.getElementById("skipStealBtn");
+    const turnIndicator = document.getElementById("turnIndicator");
+    const timerPlusBtn = document.getElementById("timerPlusBtn");
+    const timerMinusBtn = document.getElementById("timerMinusBtn");
+    const timerSettingLabel = document.getElementById("timerSettingLabel");
     const resetBtn = document.getElementById("resetBtn");
     const newGameBtn = document.getElementById("newGameBtn");
 
     let currentGameData = [];
     let currentTurnTeamId = 0;
+    let turnTimerSeconds = 15;
 
     let activeTile = null;
     let activeQuestion = null;
+    let timeRemaining = turnTimerSeconds;
+    let timerInterval = null;
+    let awaitingStealDecision = false;
 
     function getPointsForDifficulty(difficulty) {
       return DIFFICULTY_POINTS[difficulty] ?? 0;
@@ -636,6 +708,60 @@
       });
     }
 
+    function updateTurnIndicator() {
+      turnIndicator.textContent = `الدور: الفريق ${currentTurnTeamId + 1}`;
+    }
+
+    function updateTimerSettingLabel() {
+      timerSettingLabel.textContent = `الوقت: ${turnTimerSeconds} ثانية`;
+    }
+
+    function updateTimerDisplay() {
+      timerDisplay.textContent = `الوقت المتبقي: ${timeRemaining} ثانية`;
+    }
+
+    function stopQuestionTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function switchTurn() {
+      currentTurnTeamId = currentTurnTeamId === 0 ? 1 : 0;
+      updateTurnIndicator();
+      renderScoreboard();
+    }
+
+    function setScoringButtonsVisibility(isVisible) {
+      correctBtn.hidden = !isVisible;
+      wrongBtn.hidden = !isVisible;
+    }
+
+    function setStealButtonsVisibility(isVisible) {
+      stealBtn.hidden = !isVisible;
+      skipStealBtn.hidden = !isVisible;
+    }
+
+    function startQuestionTimer() {
+      stopQuestionTimer();
+      timeRemaining = turnTimerSeconds;
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        if (!activeQuestion) {
+          stopQuestionTimer();
+          return;
+        }
+
+        timeRemaining -= 1;
+        updateTimerDisplay();
+
+        if (timeRemaining <= 0) {
+          completeQuestion();
+        }
+      }, 1000);
+    }
+
     function renderBoard() {
       boardEl.innerHTML = "";
       currentGameData.forEach((columnData, colIdx) => {
@@ -664,12 +790,10 @@
     }
 
     function openQuestion(tile, category, item) {
-      if (tile.classList.contains("used")) return;
+      if (tile.classList.contains("used") || activeQuestion) return;
       activeTile = tile;
       activeQuestion = item;
-
-      tile.classList.add("used");
-      tile.disabled = true;
+      awaitingStealDecision = false;
 
       modalTitle.textContent = `${category} - ${item.points} نقطة`;
       questionText.textContent = item.q;
@@ -677,22 +801,62 @@
       answerText.classList.remove("show");
       showAnswerBtn.disabled = false;
       showAnswerBtn.textContent = "إظهار الإجابة";
+      setScoringButtonsVisibility(false);
+      setStealButtonsVisibility(false);
+      closeBtn.hidden = false;
       modal.classList.add("show");
+      startQuestionTimer();
     }
 
-    function awardPoints(teamIndex) {
+    function markActiveTileUsed() {
+      if (!activeTile) return;
+      activeTile.classList.add("used");
+      activeTile.disabled = true;
+    }
+
+    function completeQuestion() {
       if (!activeQuestion) return;
-      teams[teamIndex].score += activeQuestion.points;
-      currentTurnTeamId = teamIndex === 0 ? 1 : 0;
-      renderScoreboard();
-      closeModal();
+      markActiveTileUsed();
+      closeModal({ switchTurnAfterClose: true });
     }
 
-    function closeModal() {
+    function handleCorrectAnswer() {
+      if (!activeQuestion || !answerText.classList.contains("show")) return;
+      teams[currentTurnTeamId].score += activeQuestion.points;
+      renderScoreboard();
+      completeQuestion();
+    }
+
+    function handleWrongAnswer() {
+      if (!activeQuestion || !answerText.classList.contains("show")) return;
+      teams[currentTurnTeamId].score = Math.max(0, teams[currentTurnTeamId].score - activeQuestion.points);
+      awaitingStealDecision = true;
+      renderScoreboard();
+      setScoringButtonsVisibility(false);
+      setStealButtonsVisibility(true);
+    }
+
+    function handleStealAttempt() {
+      if (!activeQuestion || !awaitingStealDecision) return;
+      const otherTeamId = currentTurnTeamId === 0 ? 1 : 0;
+      const stealPoints = Math.round(activeQuestion.points * STEAL_POINTS_MULTIPLIER);
+      teams[otherTeamId].score += stealPoints;
+      renderScoreboard();
+      completeQuestion();
+    }
+
+    function closeModal({ switchTurnAfterClose = false } = {}) {
+      stopQuestionTimer();
       modal.classList.remove("show");
       activeQuestion = null;
       activeTile = null;
+      awaitingStealDecision = false;
       answerText.classList.remove("show");
+      setScoringButtonsVisibility(false);
+      setStealButtonsVisibility(false);
+      if (switchTurnAfterClose) {
+        switchTurn();
+      }
     }
 
     showAnswerBtn.addEventListener("click", () => {
@@ -700,10 +864,14 @@
       answerText.classList.add("show");
       showAnswerBtn.disabled = true;
       showAnswerBtn.textContent = "تم عرض الإجابة";
+      setScoringButtonsVisibility(true);
+      closeBtn.hidden = true;
     });
 
-    awardTeam1.addEventListener("click", () => awardPoints(0));
-    awardTeam2.addEventListener("click", () => awardPoints(1));
+    correctBtn.addEventListener("click", handleCorrectAnswer);
+    wrongBtn.addEventListener("click", handleWrongAnswer);
+    stealBtn.addEventListener("click", handleStealAttempt);
+    skipStealBtn.addEventListener("click", completeQuestion);
 
     closeBtn.addEventListener("click", closeModal);
 
@@ -719,6 +887,25 @@
       });
       closeModal();
       renderScoreboard();
+      updateTurnIndicator();
+    });
+
+    timerPlusBtn.addEventListener("click", () => {
+      turnTimerSeconds = Math.min(MAX_TIMER_SECONDS, turnTimerSeconds + 1);
+      updateTimerSettingLabel();
+      if (activeQuestion) {
+        timeRemaining = Math.min(timeRemaining + 1, MAX_TIMER_SECONDS);
+        updateTimerDisplay();
+      }
+    });
+
+    timerMinusBtn.addEventListener("click", () => {
+      turnTimerSeconds = Math.max(MIN_TIMER_SECONDS, turnTimerSeconds - 1);
+      updateTimerSettingLabel();
+      if (activeQuestion) {
+        timeRemaining = Math.max(timeRemaining - 1, 0);
+        updateTimerDisplay();
+      }
     });
 
     function startNewGame() {
@@ -729,6 +916,8 @@
       currentGameData = buildGameDataFromPools();
       closeModal();
       renderScoreboard();
+      updateTurnIndicator();
+      updateTimerSettingLabel();
       renderBoard();
     }
 
