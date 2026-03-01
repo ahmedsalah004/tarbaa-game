@@ -1212,13 +1212,19 @@
     }
 
     function setImportErrors(errors) {
+      importErrors.replaceChildren();
+
       if (!errors.length) {
         importErrors.classList.remove("show");
-        importErrors.innerHTML = "";
         return;
       }
 
-      importErrors.innerHTML = errors.map((err) => `• ${err}`).join("<br>");
+      errors.forEach((err) => {
+        const line = document.createElement("div");
+        line.textContent = `• ${String(err)}`;
+        importErrors.appendChild(line);
+      });
+
       importErrors.classList.add("show");
     }
 
