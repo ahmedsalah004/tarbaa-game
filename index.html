@@ -537,6 +537,8 @@
       color: #fef3c7;
       font-weight: 800;
       font-size: 1.25rem;
+    }
+
     .turn-indicator {
       background: rgba(30, 41, 59, 0.8);
       border: 1px solid rgba(148, 163, 184, 0.35);
@@ -687,13 +689,11 @@
       <h1>🎯 لعبة تربّع - تحدي المعرفة</h1>
       <div class="scoreboard" id="scoreboard"></div>
       <div class="header-actions">
-        <div class="turn-indicator" id="turnIndicator"></div>
         <button class="reset" id="tvModeBtn">⛶ وضع التلفاز</button>
         <button class="reset" id="adminBtn">⚙️ الإدارة</button>
         <button class="reset" id="newGameBtn">لعبة جديدة</button>
         <button class="reset" id="resetBtn">إعادة ضبط النقاط</button>
-      <button class="reset" id="newGameBtn">لعبة جديدة</button>
-      <button class="reset" id="resetBtn">إعادة ضبط النقاط</button>
+      </div>
       <div class="status-row">
         <div class="turn-indicator" id="turnIndicator">الدور: الفريق 1</div>
         <div class="timer-settings">
@@ -1010,7 +1010,6 @@
     const lifelineOutput = document.getElementById("lifelineOutput");
     const friendOverlay = document.getElementById("friendOverlay");
     const friendCountdown = document.getElementById("friendCountdown");
-    const turnIndicator = document.getElementById("turnIndicator");
     const tvModeBtn = document.getElementById("tvModeBtn");
     const adminBtn = document.getElementById("adminBtn");
     const adminModal = document.getElementById("adminModal");
