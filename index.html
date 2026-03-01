@@ -1,9 +1,485 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
-  <title>Tarbaa Game</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لعبة تربّع - مسابقة معلومات</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-light: #334155;
+      --accent: #f59e0b;
+      --accent-2: #22d3ee;
+      --good: #22c55e;
+      --bad: #ef4444;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Tajawal", "Cairo", "Segoe UI", sans-serif;
+    }
+
+    body {
+      direction: rtl;
+      min-height: 100vh;
+      color: var(--text);
+      background: radial-gradient(circle at top, #1e293b 0%, #020617 60%, #01040c 100%);
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    .top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(4px);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+    }
+
+    .scoreboard {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .team-card {
+      background: linear-gradient(160deg, #1e293b 10%, #0f172a 100%);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 14px;
+      padding: 10px 14px;
+      min-width: 180px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .team-name {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      color: var(--accent-2);
+    }
+
+    .team-score {
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      opacity: 0.95;
+    }
+
+    .add {
+      background: var(--good);
+      color: white;
+    }
+
+    .subtract {
+      background: var(--bad);
+      color: white;
+    }
+
+    .award {
+      background: #16a34a;
+      color: white;
+      font-weight: 700;
+    }
+
+    .reset {
+      background: var(--card-light);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 10px 14px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .column {
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .category {
+      background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 800;
+      padding: 14px 8px;
+      min-height: 72px;
+      display: grid;
+      place-items: center;
+    }
+
+    .tile {
+      width: 100%;
+      background: linear-gradient(160deg, #1d4ed8 0%, #1e3a8a 100%);
+      color: #fde68a;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 1.5rem;
+      font-weight: 900;
+      min-height: 84px;
+      border-radius: 0;
+    }
+
+    .tile:hover {
+      filter: brightness(1.1);
+      transform: none;
+    }
+
+    .tile.used {
+      background: #0b1020;
+      color: #334155;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.76);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 999;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .dialog {
+      width: min(720px, 100%);
+      background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .dialog h2 {
+      color: var(--accent);
+      font-size: 1.2rem;
+    }
+
+    .question {
+      font-size: 1.4rem;
+      line-height: 1.7;
+      font-weight: 700;
+    }
+
+    .answer {
+      display: none;
+      border-top: 1px dashed rgba(148, 163, 184, 0.4);
+      padding-top: 12px;
+      color: #e2e8f0;
+      font-size: 1.15rem;
+    }
+
+    .answer.show {
+      display: block;
+    }
+
+    .dialog-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #111827;
+      font-weight: 800;
+      padding: 10px 14px;
+    }
+
+    .secondary {
+      background: #334155;
+      color: #f8fafc;
+      padding: 10px 14px;
+    }
+
+    .note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 960px) {
+      .board {
+        grid-template-columns: 1fr;
+      }
+
+      .tile {
+        min-height: 70px;
+      }
+
+      .category {
+        min-height: auto;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Tarbaa Game Coming Soon</h1>
+  <div class="container">
+    <div class="top">
+      <h1>🎯 لعبة تربّع - تحدي المعرفة</h1>
+      <div class="scoreboard" id="scoreboard"></div>
+      <button class="reset" id="resetBtn">إعادة ضبط النقاط</button>
+    </div>
+
+    <div class="board" id="board"></div>
+    <p class="note">اضغط على أي مربع لعرض السؤال، ثم أظهر الإجابة وحدّث نقاط الفريق الفائز.</p>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="dialog">
+      <h2 id="modalTitle"></h2>
+      <p class="question" id="questionText"></p>
+      <p class="answer" id="answerText"></p>
+      <div class="dialog-actions">
+        <button class="primary" id="showAnswerBtn">إظهار الإجابة</button>
+        <button class="award" id="awardTeam1">احتساب للفريق الأول</button>
+        <button class="award" id="awardTeam2">احتساب للفريق الثاني</button>
+        <button class="secondary" id="closeBtn">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const gameData = [
+      {
+        category: "القرآن الكريم",
+        questions: [
+          { points: 100, q: "ما هي أول سورة في القرآن الكريم؟", a: "سورة الفاتحة" },
+          { points: 200, q: "ما اسم السورة التي تُعرف بقلب القرآن؟", a: "سورة يس" },
+          { points: 300, q: "كم عدد أجزاء القرآن الكريم؟", a: "30 جزءًا" },
+          { points: 400, q: "ما هي أطول سورة في القرآن الكريم؟", a: "سورة البقرة" },
+          { points: 500, q: "ما اسم السورة التي لا تبدأ بالبسملة؟", a: "سورة التوبة" }
+        ]
+      },
+      {
+        category: "التاريخ الإسلامي",
+        questions: [
+          { points: 100, q: "من هو أول الخلفاء الراشدين؟", a: "أبو بكر الصديق رضي الله عنه" },
+          { points: 200, q: "في أي مدينة وقعت غزوة بدر؟", a: "قرب المدينة المنورة عند بدر" },
+          { points: 300, q: "في أي عام هاجر النبي ﷺ إلى المدينة؟", a: "عام 622 ميلاديًا" },
+          { points: 400, q: "من هو القائد الذي فتح الأندلس؟", a: "طارق بن زياد" },
+          { points: 500, q: "ما اسم المعركة التي انتصر فيها المسلمون بقيادة صلاح الدين واستعادوا القدس؟", a: "معركة حطين" }
+        ]
+      },
+      {
+        category: "الجغرافيا",
+        questions: [
+          { points: 100, q: "ما هي أكبر دولة عربية من حيث المساحة؟", a: "الجزائر" },
+          { points: 200, q: "ما أطول نهر في العالم؟", a: "نهر النيل" },
+          { points: 300, q: "ما عاصمة المغرب؟", a: "الرباط" },
+          { points: 400, q: "أي قارة تُعرف بالقارة السمراء؟", a: "أفريقيا" },
+          { points: 500, q: "ما المضيق الذي يفصل بين آسيا وأمريكا الشمالية؟", a: "مضيق بيرينغ" }
+        ]
+      },
+      {
+        category: "العلوم والتقنية",
+        questions: [
+          { points: 100, q: "ما الكوكب الأقرب إلى الشمس؟", a: "عطارد" },
+          { points: 200, q: "ما الغاز الذي نتنفسه ويحتاجه الجسم؟", a: "الأكسجين" },
+          { points: 300, q: "ما الوحدة الأساسية لقياس شدة التيار الكهربائي؟", a: "الأمبير" },
+          { points: 400, q: "من مخترع المصباح الكهربائي الشائع؟", a: "توماس إديسون" },
+          { points: 500, q: "ما اسم التقنية التي تمكّن الأجهزة من تبادل البيانات لاسلكيًا لمسافات قصيرة؟", a: "البلوتوث" }
+        ]
+      },
+      {
+        category: "رياضة وثقافة عامة",
+        questions: [
+          { points: 100, q: "كم عدد لاعبي فريق كرة القدم داخل الملعب؟", a: "11 لاعبًا" },
+          { points: 200, q: "ما اللغة الأكثر تحدثًا في العالم من حيث عدد المتحدثين الأصليين؟", a: "اللغة الصينية (الماندرين)" },
+          { points: 300, q: "من صاحب رواية " + "\"" + "البؤساء" + "\"" + "؟", a: "فيكتور هوغو" },
+          { points: 400, q: "في أي دولة أقيمت كأس العالم 2022؟", a: "قطر" },
+          { points: 500, q: "ما اسم أكبر محيط على سطح الأرض؟", a: "المحيط الهادئ" }
+        ]
+      }
+    ];
+
+    const teams = [
+      { id: 0, name: "الفريق الأول", score: 0 },
+      { id: 1, name: "الفريق الثاني", score: 0 }
+    ];
+
+    const boardEl = document.getElementById("board");
+    const scoreboardEl = document.getElementById("scoreboard");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modalTitle");
+    const questionText = document.getElementById("questionText");
+    const answerText = document.getElementById("answerText");
+    const showAnswerBtn = document.getElementById("showAnswerBtn");
+    const closeBtn = document.getElementById("closeBtn");
+    const awardTeam1 = document.getElementById("awardTeam1");
+    const awardTeam2 = document.getElementById("awardTeam2");
+    const resetBtn = document.getElementById("resetBtn");
+
+    let activeTile = null;
+    let activeQuestion = null;
+
+    function renderScoreboard() {
+      scoreboardEl.innerHTML = "";
+
+      teams.forEach((team) => {
+        const card = document.createElement("div");
+        card.className = "team-card";
+
+        card.innerHTML = `
+          <div class="team-name">${team.name}<span>${team.score} نقطة</span></div>
+          <div class="controls">
+            <button class="subtract" data-team="${team.id}" data-type="subtract">خصم 100</button>
+          </div>
+          <div class="team-score">${team.score}</div>
+        `;
+
+        scoreboardEl.appendChild(card);
+      });
+
+      scoreboardEl.querySelectorAll("button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const team = teams.find((t) => t.id === Number(btn.dataset.team));
+          if (!team) return;
+          if (btn.dataset.type === "subtract") team.score = Math.max(0, team.score - 100);
+          renderScoreboard();
+        });
+      });
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      gameData.forEach((columnData, colIdx) => {
+        const column = document.createElement("div");
+        column.className = "column";
+
+        const category = document.createElement("div");
+        category.className = "category";
+        category.textContent = columnData.category;
+        column.appendChild(category);
+
+        columnData.questions.forEach((item, rowIdx) => {
+          const tile = document.createElement("button");
+          tile.className = "tile";
+          tile.textContent = item.points;
+          tile.setAttribute("data-col", colIdx);
+          tile.setAttribute("data-row", rowIdx);
+
+          tile.addEventListener("click", () => openQuestion(tile, columnData.category, item));
+          column.appendChild(tile);
+        });
+
+        boardEl.appendChild(column);
+      });
+    }
+
+    function openQuestion(tile, category, item) {
+      activeTile = tile;
+      activeQuestion = item;
+
+      modalTitle.textContent = `${category} - ${item.points} نقطة`;
+      questionText.textContent = item.q;
+      answerText.textContent = `الإجابة: ${item.a}`;
+      answerText.classList.remove("show");
+      showAnswerBtn.disabled = false;
+      showAnswerBtn.textContent = "إظهار الإجابة";
+      modal.classList.add("show");
+    }
+
+    showAnswerBtn.addEventListener("click", () => {
+      if (!activeQuestion) return;
+      answerText.classList.add("show");
+      showAnswerBtn.disabled = true;
+      showAnswerBtn.textContent = "تم عرض الإجابة";
+      if (activeTile) activeTile.classList.add("used");
+    });
+
+    awardTeam1.addEventListener("click", () => {
+      if (!activeQuestion) return;
+      teams[0].score += activeQuestion.points;
+      renderScoreboard();
+      modal.classList.remove("show");
+    });
+
+    awardTeam2.addEventListener("click", () => {
+      if (!activeQuestion) return;
+      teams[1].score += activeQuestion.points;
+      renderScoreboard();
+      modal.classList.remove("show");
+    });
+
+    closeBtn.addEventListener("click", () => {
+      modal.classList.remove("show");
+    });
+
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        modal.classList.remove("show");
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      teams.forEach((team) => {
+        team.score = 0;
+      });
+      renderScoreboard();
+    });
+
+    renderScoreboard();
+    renderBoard();
+  </script>
 </body>
 </html>
