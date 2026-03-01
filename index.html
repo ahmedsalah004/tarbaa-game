@@ -819,6 +819,7 @@
       5: 500
     };
     const USED_QUESTIONS_STORAGE_KEY = "usedQuestions";
+    const QUESTION_BANK_STORAGE_KEY = "tarbaa_question_bank";
 
     let questionBank = {
       "القرآن الكريم": [
@@ -1078,6 +1079,20 @@
       return normalizedBank;
     }
 
+    function saveQuestionBankToStorage() {
+      localStorage.setItem(QUESTION_BANK_STORAGE_KEY, JSON.stringify(questionBank));
+    }
+
+    function replaceQuestionBank(newQuestionBank) {
+      questionBank = normalizeQuestionBank(newQuestionBank);
+      manualSelectedCategories = new Set();
+      renderCategoryControls();
+      closeModal();
+      currentGameData = buildGameDataFromPools();
+      renderBoard();
+      saveQuestionBankToStorage();
+    }
+
     function loadUsedQuestionsByCategory() {
       try {
         const parsed = JSON.parse(localStorage.getItem(USED_QUESTIONS_STORAGE_KEY) || "{}");
@@ -1093,6 +1108,21 @@
     }
 
     questionBank = normalizeQuestionBank(questionBank);
+
+    try {
+      const persistedQuestionBank = localStorage.getItem(QUESTION_BANK_STORAGE_KEY);
+      if (persistedQuestionBank) {
+        const parsedPersistedQuestionBank = JSON.parse(persistedQuestionBank);
+        const persistedErrors = validateQuestionBank(parsedPersistedQuestionBank);
+        if (!persistedErrors.length) {
+          questionBank = normalizeQuestionBank(parsedPersistedQuestionBank);
+        } else {
+          console.warn("Persisted question bank was ignored due to validation errors:", persistedErrors);
+        }
+      }
+    } catch (error) {
+      console.warn("Unable to parse persisted question bank from localStorage.", error);
+    }
 
     const boardEl = document.getElementById("board");
     const scoreboardEl = document.getElementById("scoreboard");
@@ -1780,8 +1810,8 @@
       }
 
       const categories = Object.keys(data);
-      if (categories.length !== 5) {
-        errors.push("يجب أن يحتوي بنك الأسئلة على 5 فئات بالضبط.");
+      if (!categories.length) {
+        errors.push("يجب أن يحتوي بنك الأسئلة على فئة واحدة على الأقل.");
       }
 
       categories.forEach((category) => {
@@ -1790,8 +1820,6 @@
           errors.push(`الفئة "${category}" يجب أن تحتوي قائمة أسئلة غير فارغة.`);
           return;
         }
-
-        const categoryDifficultyCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
         items.forEach((item, idx) => {
           if (!item || typeof item !== "object") {
@@ -1807,20 +1835,12 @@
           }
           if (!Number.isInteger(item.difficulty) || item.difficulty < 1 || item.difficulty > 5) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: difficulty يجب أن يكون بين 1 و 5.`);
-          } else {
-            categoryDifficultyCounts[item.difficulty] += 1;
-          }
-          if (item.type !== undefined && (typeof item.type !== "string" || !item.type.trim())) {
-            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل type (إن وُجد) يجب أن يكون نصًا غير فارغ.`);
-          }
-        });
-
-        DIFFICULTIES.forEach((difficulty) => {
-          if (categoryDifficultyCounts[difficulty] < 1) {
-            errors.push(`الفئة "${category}" تفتقد سؤالًا على الأقل للصعوبة ${difficulty}.`);
           }
           if (item.id !== undefined && (typeof item.id !== "string" || !item.id.trim())) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: إذا وُجد الحقل id فيجب أن يكون نصًا غير فارغ.`);
+          }
+          if (item.type !== undefined && (typeof item.type !== "string" || !item.type.trim())) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل type (إن وُجد) يجب أن يكون نصًا غير فارغ.`);
           }
         });
       });
@@ -1885,19 +1905,24 @@
     });
 
     applyImportBtn.addEventListener("click", () => {
+      const rawInput = importText.value.trim();
+      if (!rawInput) {
+        setImportErrors(["الرجاء لصق JSON قبل الضغط على تطبيق الاستيراد."]);
+        return;
+      }
+
       try {
-        const parsed = JSON.parse(importText.value);
+        const parsed = JSON.parse(rawInput);
         const errors = validateQuestionBank(parsed);
         if (errors.length) {
           setImportErrors(errors);
           return;
         }
 
-        questionBank = normalizeQuestionBank(parsed);
-        setImportErrors(["تم الاستيراد بنجاح. سيتم بدء لعبة جديدة بالبيانات الجديدة."]);
-        startNewGame();
+        replaceQuestionBank(parsed);
+        setImportErrors(["تم استيراد بنك الأسئلة بنجاح."]);
       } catch (error) {
-        setImportErrors(["JSON غير صالح. تحقق من البنية وحاول مجددًا."]);
+        setImportErrors([`JSON غير صالح: ${error.message}`]);
       }
     });
 
