@@ -510,10 +510,25 @@
     }
 
     .options-list {
-      list-style: decimal;
-      margin: 6px 24px 0 0;
+      list-style: none;
+      margin: 6px 0 0;
       display: grid;
       gap: 6px;
+    }
+
+    .options-list li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: baseline;
+      direction: rtl;
+      text-align: right;
+    }
+
+    .choice-label {
+      color: #fcd34d;
+      font-weight: 800;
+      min-width: 20px;
     }
 
     .friend-overlay {
@@ -784,6 +799,8 @@
             </select>
           </label>
           <button class="primary" id="saveSettingsBtn">حفظ الإعدادات</button>
+          <button class="secondary" id="difficultyAuditBtn">فحص الصعوبة (4 و 5)</button>
+          <div class="lifeline-output" id="difficultyAuditOutput"></div>
         </div>
       </div>
       <div class="dialog-actions">
@@ -964,14 +981,54 @@
 
     const questionBankMeta = {
       distractors: {
-        "القرآن الكريم": ["سورة البقرة", "سورة الكهف", "سورة يس", "سورة الإخلاص", "سورة الرحمن", "سورة النساء"],
-        "التاريخ الإسلامي": ["صلاح الدين الأيوبي", "الأندلس", "معركة اليرموك", "الخلافة العباسية", "طارق بن زياد", "بغداد"],
-        "الجغرافيا": ["الخرطوم", "الرباط", "الجزائر", "جبال الألب", "المحيط الأطلسي", "بحر العرب"],
-        "العلوم والتقنية": ["النيتروجين", "أينشتاين", "الخلية", "المريخ", "البنسلين", "الجاذبية"],
-        "رياضة وثقافة عامة": ["برشلونة", "ريال مدريد", "باريس", "بيتهوفن", "طوكيو", "رونالدو"],
-        "السيرة النبوية": ["المدينة المنورة", "أم أيمن", "غار ثور", "عمر بن الخطاب", "غزوة بدر", "صلح الحديبية"],
-        "مصر": ["الأقصر", "أسوان", "قناة بنما", "دمياط", "متحف التحرير", "المنصورة"],
-        "ماركات": ["سامسونج", "نايكي", "غوغل", "تويوتا", "هواوي", "مايكروسوفت"]
+        "القرآن الكريم": [
+          "سورة الفاتحة", "سورة البقرة", "سورة آل عمران", "سورة النساء", "سورة المائدة", "سورة الأنعام", "سورة الأعراف", "سورة الأنفال", "سورة التوبة", "سورة يونس",
+          "سورة هود", "سورة يوسف", "سورة الرعد", "سورة إبراهيم", "سورة الحجر", "سورة النحل", "سورة الإسراء", "سورة الكهف", "سورة مريم", "سورة طه",
+          "سورة الأنبياء", "سورة الحج", "سورة المؤمنون", "سورة النور", "سورة الفرقان", "سورة الشعراء", "سورة النمل", "سورة القصص", "سورة العنكبوت", "سورة الروم",
+          "آية الكرسي", "ليلة القدر", "غزوة بدر", "دار الأرقم", "يوم الفرقان"
+        ],
+        "التاريخ الإسلامي": [
+          "أبو بكر الصديق", "عمر بن الخطاب", "عثمان بن عفان", "علي بن أبي طالب", "خالد بن الوليد", "عمرو بن العاص", "معاوية بن أبي سفيان", "عمر بن عبدالعزيز", "طارق بن زياد", "موسى بن نصير",
+          "سعد بن أبي وقاص", "صلاح الدين الأيوبي", "نور الدين زنكي", "القادسية", "اليرموك", "بدر", "أحد", "الخندق", "حنين", "تبوك",
+          "المدينة المنورة", "مكة المكرمة", "القدس", "دمشق", "بغداد", "القيروان", "الفسطاط", "الأندلس", "صلح الحديبية", "بيعة العقبة",
+          "عام الفيل", "622", "680", "750", "1258"
+        ],
+        "الجغرافيا": [
+          "القاهرة", "الرياض", "دمشق", "بغداد", "عمّان", "الرباط", "الجزائر", "الخرطوم", "تونس", "طرابلس",
+          "نهر النيل", "نهر دجلة", "نهر الفرات", "البحر الأحمر", "البحر المتوسط", "الخليج العربي", "المحيط الأطلسي", "المحيط الهندي", "بحر العرب", "البحر الأسود",
+          "جبل إيفرست", "جبال الألب", "جبال الأطلس", "جبال الهيمالايا", "صحراء الربع الخالي", "صحراء الكبرى", "قناة السويس", "مضيق هرمز", "مضيق جبل طارق", "رأس الرجاء الصالح",
+          "الإسكندرية", "الدوحة", "أنقرة", "جاكرتا", "أثينا"
+        ],
+        "العلوم والتقنية": [
+          "ألبرت أينشتاين", "إسحاق نيوتن", "توماس إديسون", "نيكولا تسلا", "ماري كوري", "الخوارزمي", "ابن الهيثم", "غراهام بيل", "ستيف جوبز", "إيلون ماسك",
+          "الهيدروجين", "الأكسجين", "النيتروجين", "الكربون", "الحديد", "الذهب", "الجاذبية", "الكهرباء", "الطاقة الشمسية", "الذكاء الاصطناعي",
+          "الخلية", "الحمض النووي", "الدماغ", "المريخ", "الزهرة", "المشتري", "بلوتو", "الضوء", "البنسلين", "اللقاح",
+          "1947", "1969", "1989", "2007", "2022"
+        ],
+        "رياضة وثقافة عامة": [
+          "محمد صلاح", "كريستيانو رونالدو", "ليونيل ميسي", "زين الدين زيدان", "نيمار", "كيليان مبابي", "دييغو مارادونا", "بيليه", "روجيه فيدرر", "مايكل جوردان",
+          "الأهلي", "الزمالك", "برشلونة", "ريال مدريد", "مانشستر يونايتد", "ليفربول", "بايرن ميونخ", "يوفنتوس", "الهلال", "النصر",
+          "كأس العالم", "كأس آسيا", "دوري أبطال أوروبا", "الألعاب الأولمبية", "كوبا أمريكا", "دوري الأمم", "باريس", "طوكيو", "روما", "لندن",
+          "1982", "1994", "2002", "2010", "2026"
+        ],
+        "السيرة النبوية": [
+          "محمد ﷺ", "خديجة بنت خويلد", "عائشة رضي الله عنها", "أبو بكر الصديق", "عمر بن الخطاب", "علي بن أبي طالب", "حمزة بن عبدالمطلب", "بلال بن رباح", "زيد بن حارثة", "أم أيمن",
+          "الهجرة", "غزوة بدر", "غزوة أحد", "غزوة الخندق", "غزوة حنين", "صلح الحديبية", "فتح مكة", "بيعة الرضوان", "حجة الوداع", "الإسراء والمعراج",
+          "مكة المكرمة", "المدينة المنورة", "غار حراء", "غار ثور", "المسجد النبوي", "المسجد الحرام", "بدر", "أحد", "خيبر", "تبوك",
+          "610", "622", "630", "632", "40"
+        ],
+        "مصر": [
+          "القاهرة", "الإسكندرية", "الجيزة", "الأقصر", "أسوان", "بورسعيد", "السويس", "المنصورة", "طنطا", "الزقازيق",
+          "نهر النيل", "قناة السويس", "البحر الأحمر", "البحر المتوسط", "وادي النطرون", "سيناء", "دلتا النيل", "الصحراء الشرقية", "الصحراء الغربية", "واحة سيوة",
+          "متحف الحضارة", "متحف التحرير", "أبو الهول", "الأهرامات", "وادي الملوك", "السد العالي", "معبد الكرنك", "مكتبة الإسكندرية", "العاصمة الإدارية", "هضبة الجيزة",
+          "1952", "1973", "1869", "2015", "2024"
+        ],
+        "ماركات": [
+          "آبل", "سامسونج", "هواوي", "شاومي", "أوبو", "فيفو", "نوكيا", "سوني", "إل جي", "جوجل",
+          "مايكروسوفت", "أمازون", "ميتا", "إنتل", "إنفيديا", "تسلا", "تويوتا", "مرسيدس", "بي إم دبليو", "أودي",
+          "نايكي", "أديداس", "بوما", "رولكس", "كوكاكولا", "بيبسي", "ستاربكس", "مكدونالدز", "نتفلكس", "سبوتيفاي",
+          "1964", "1976", "1998", "2004", "2016"
+        ]
       }
     };
 
@@ -1078,6 +1135,8 @@
     const timerSecondsInput = document.getElementById("timerSecondsInput");
     const stealModeSelect = document.getElementById("stealModeSelect");
     const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+    const difficultyAuditBtn = document.getElementById("difficultyAuditBtn");
+    const difficultyAuditOutput = document.getElementById("difficultyAuditOutput");
 
     const gameSettings = {
       timerSeconds: 30,
@@ -1148,6 +1207,24 @@
 
     function buildGameDataFromPools() {
       const categoriesForGame = getCategoriesForGame();
+      return categoriesForGame.map((category) => {
+        const pool = questionBank[category] || [];
+
+        const selectedQuestions = DIFFICULTIES.map((difficulty) => {
+          const candidates = pool.filter((item) => item.difficulty === difficulty && item.q && item.a);
+          const chosen = candidates.length ? pickRandom(candidates) : null;
+
+          if (!chosen) {
+            console.error(`Missing question for category "${category}" at difficulty ${difficulty}.`);
+            return {
+              q: `⚠️ لا يوجد سؤال صعوبة ${difficulty} في فئة ${category}`,
+              a: "يرجى ضبط بنك الأسئلة من لوحة الإدارة.",
+              difficulty,
+              points: getPointsForDifficulty(difficulty)
+            };
+          }
+
+          return {
       const usedQuestionsByCategory = loadUsedQuestionsByCategory();
 
       const gameData = categoriesForGame.map((category) => {
@@ -1197,9 +1274,10 @@
             a: chosen.a,
             hint: chosen.hint,
             hint2: chosen.hint2,
+            type: chosen.type,
             difficulty,
             points: getPointsForDifficulty(difficulty)
-          });
+          };
         });
 
         usedQuestionsByCategory[category] = [...new Set([...(usedQuestionsByCategory[category] || []), ...selectedQuestions.map((item) => item.id)])];
@@ -1211,10 +1289,85 @@
     }
 
     function detectAnswerType(answer) {
-      if (/\d/.test(answer)) return "الإجابة رقم أو سنة";
-      if (/مدينة|القاهرة|مكة|المدينة|الرياض|باريس|لندن|دمشق|بغداد|الإسكندرية/.test(answer)) return "الإجابة مدينة";
-      if (answer.includes(" ")) return "الإجابة من كلمتين أو أكثر";
-      return "الإجابة كلمة واحدة";
+      const normalized = String(answer || "").trim();
+      const compact = normalized.replace(/[\s،,.-]/g, "");
+      if (!normalized) return "phrase";
+      if (/^[\d٠-٩]+$/.test(compact) || /^[\d٠-٩]+\s*(ميلاديًا|هجريًا|م|هـ|سنة)?$/.test(normalized)) return "yearOrNumber";
+      const words = normalized.split(/\s+/).filter(Boolean);
+      if (words.length >= 3) return "phrase";
+      if (/\b(بن|ابن|بنت|أبو|أبي|عبد)\b/.test(normalized) || /ﷺ|رضي الله عنه/.test(normalized)) return "personName";
+      if (/مدينة|دولة|محافظة|نهر|بحر|جبل|هضبة|قناة|مضيق|وادي|صحراء|العاصمة|المنورة|القاهرة|الإسكندرية|مكة|المدينة|الرياض|دمشق|بغداد/.test(normalized)) return "place";
+      return words.length === 1 ? "brandOrSingleWord" : "phrase";
+    }
+
+    function getArabicFirstLetter(value) {
+      const normalized = String(value || "").trim().replace(/^(ال)/, "");
+      return normalized[0] || "";
+    }
+
+    function getWordCount(value) {
+      return String(value || "").trim().split(/\s+/).filter(Boolean).length;
+    }
+
+    function parseArabicNumber(value) {
+      const digitsMap = { "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4", "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9" };
+      const latin = String(value || "").replace(/[٠-٩]/g, (d) => digitsMap[d] || d);
+      const match = latin.match(/-?\d+/);
+      return match ? Number.parseInt(match[0], 10) : null;
+    }
+
+    function generateHardChoices(answer, category) {
+      const normalizedAnswer = String(answer || "").trim();
+      const answerType = detectAnswerType(normalizedAnswer);
+      const answerWordCount = getWordCount(normalizedAnswer);
+      const answerFirstLetter = getArabicFirstLetter(normalizedAnswer);
+      const pool = [
+        ...(questionBankMeta.distractors[category] || []),
+        ...((questionBank[category] || []).map((item) => item.a))
+      ].filter(Boolean);
+
+      const uniquePool = [...new Set(pool.map((item) => String(item).trim()))]
+        .filter((candidate) => candidate && candidate !== normalizedAnswer);
+
+      const parsedNumber = parseArabicNumber(normalizedAnswer);
+      const choicesSet = new Set([normalizedAnswer]);
+
+      if (answerType === "yearOrNumber" && parsedNumber !== null) {
+        const deltas = [5, -5, 10, -10, 20, -20, 1, -1, 2, -2];
+        deltas.forEach((delta) => {
+          if (choicesSet.size >= 4) return;
+          const generated = parsedNumber + delta;
+          if (generated > 0) choicesSet.add(String(generated));
+        });
+      }
+
+      const ranked = uniquePool
+        .map((candidate) => {
+          const candidateType = detectAnswerType(candidate);
+          const candidateWordCount = getWordCount(candidate);
+          const candidateFirstLetter = getArabicFirstLetter(candidate);
+          let score = 0;
+          if (candidateType === answerType) score += 4;
+          if (candidateWordCount === answerWordCount) score += 3;
+          if (Math.abs(candidateWordCount - answerWordCount) <= 1) score += 1;
+          if (answerFirstLetter && candidateFirstLetter === answerFirstLetter) score += 2;
+          return { candidate, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .map((item) => item.candidate);
+
+      ranked.forEach((candidate) => {
+        if (choicesSet.size >= 4) return;
+        choicesSet.add(candidate);
+      });
+
+      const fallback = ["غير متاح", "خيار قريب", "احتمال آخر", "إجابة مشابهة"];
+      fallback.forEach((candidate) => {
+        if (choicesSet.size >= 4) return;
+        choicesSet.add(candidate);
+      });
+
+      return shuffleArray([...choicesSet]).slice(0, 4);
     }
 
     function buildStrongHint(answer) {
@@ -1422,10 +1575,6 @@
       activeCategory = category;
       awaitingStealDecision = false;
 
-      Object.keys(lifelinesState).forEach((key) => {
-        lifelinesState[key] = false;
-      });
-
       setTimeout(() => {
         tile.classList.remove("revealing");
         tile.classList.add("used");
@@ -1503,25 +1652,9 @@
 
     function useLifelineOptions() {
       if (!activeQuestion || lifelinesState.options) return;
-      const categoryPool = questionBankMeta.distractors[activeCategory] || [];
-      const sameCategoryAnswers = (questionBank[activeCategory] || []).map((item) => item.a);
-      const candidateDistractors = shuffleArray([...categoryPool, ...sameCategoryAnswers]);
-      const unique = new Set([activeQuestion.a]);
-
-      for (const candidate of candidateDistractors) {
-        if (unique.size >= 4) break;
-        if (!candidate || candidate === activeQuestion.a) continue;
-        unique.add(candidate);
-      }
-
-      const fallbackDistractors = ["غير متاح", "إجابة بديلة", "خيار آخر"];
-      for (const fallback of fallbackDistractors) {
-        if (unique.size >= 4) break;
-        unique.add(fallback);
-      }
-
-      const options = shuffleArray([...unique]).slice(0, 4);
-      lifelineOutput.innerHTML = `<div>خيارات المساعدة:</div><ol class="options-list">${options.map((opt) => `<li>${opt}</li>`).join("")}</ol>`;
+      const options = generateHardChoices(activeQuestion.a, activeCategory);
+      const labels = ["أ", "ب", "ج", "د"];
+      lifelineOutput.innerHTML = `<div>خيارات المساعدة:</div><ol class="options-list">${options.map((opt, idx) => `<li><span class="choice-label">${labels[idx]})</span><span>${opt}</span></li>`).join("")}</ol>`;
       lifelinesState.options = true;
       renderLifelinesState();
     }
@@ -1547,7 +1680,7 @@
 
       const suggestion = activeQuestion.hint
         ? `اقتراح الصديق: ${activeQuestion.hint}`
-        : `اقتراح الصديق: ${detectAnswerType(activeQuestion.a)}.`;
+        : `اقتراح الصديق: نوع الإجابة غالبًا ${detectAnswerType(activeQuestion.a)}.`;
       lifelineOutput.innerHTML = `<div>${suggestion}</div>`;
     }
 
@@ -1677,6 +1810,8 @@
           return;
         }
 
+        const categoryDifficultyCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
         items.forEach((item, idx) => {
           if (!item || typeof item !== "object") {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1} غير صالح.`);
@@ -1691,6 +1826,17 @@
           }
           if (!Number.isInteger(item.difficulty) || item.difficulty < 1 || item.difficulty > 5) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: difficulty يجب أن يكون بين 1 و 5.`);
+          } else {
+            categoryDifficultyCounts[item.difficulty] += 1;
+          }
+          if (item.type !== undefined && (typeof item.type !== "string" || !item.type.trim())) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل type (إن وُجد) يجب أن يكون نصًا غير فارغ.`);
+          }
+        });
+
+        DIFFICULTIES.forEach((difficulty) => {
+          if (categoryDifficultyCounts[difficulty] < 1) {
+            errors.push(`الفئة "${category}" تفتقد سؤالًا على الأقل للصعوبة ${difficulty}.`);
           }
           if (item.id !== undefined && (typeof item.id !== "string" || !item.id.trim())) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: إذا وُجد الحقل id فيجب أن يكون نصًا غير فارغ.`);
@@ -1719,8 +1865,11 @@
       timerSecondsInput.value = String(gameSettings.timerSeconds);
       stealModeSelect.value = gameSettings.stealMode;
       setImportErrors([]);
+      difficultyAuditOutput.innerHTML = "";
       adminModal.classList.add("show");
     });
+
+    difficultyAuditBtn.addEventListener("click", renderDifficultyAudit);
 
     closeAdminBtn.addEventListener("click", () => adminModal.classList.remove("show"));
 
@@ -1770,6 +1919,30 @@
         setImportErrors(["JSON غير صالح. تحقق من البنية وحاول مجددًا."]);
       }
     });
+
+    function getDifficultyAuditRows() {
+      const rows = [];
+      Object.entries(questionBank).forEach(([category, items]) => {
+        (items || []).forEach((item) => {
+          if (item && (item.difficulty === 4 || item.difficulty === 5) && item.q) {
+            rows.push({ category, question: item.q, difficulty: item.difficulty });
+          }
+        });
+      });
+      return rows;
+    }
+
+    function renderDifficultyAudit() {
+      const rows = getDifficultyAuditRows();
+      if (!rows.length) {
+        difficultyAuditOutput.innerHTML = "<div>لا توجد أسئلة صعوبة 4 أو 5 حاليًا.</div>";
+        return;
+      }
+      const html = rows
+        .map((row) => `<li><span class="choice-label">(${row.difficulty})</span><span>${row.category}: ${row.question}</span></li>`)
+        .join("");
+      difficultyAuditOutput.innerHTML = `<div>نتيجة فحص الصعوبة:</div><ol class="options-list">${html}</ol>`;
+    }
 
     saveSettingsBtn.addEventListener("click", () => {
       const timerValue = Number(timerSecondsInput.value);
