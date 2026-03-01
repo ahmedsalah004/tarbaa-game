@@ -1283,6 +1283,7 @@
       currentTurnTeamId = currentTurnTeamId === 0 ? 1 : 0;
       updateTurnIndicator();
       renderScoreboard();
+      console.log("Switched turn to", currentTurnTeamId);
     }
 
     function setScoringButtonsVisibility(isVisible) {
@@ -1343,8 +1344,16 @@
 
     function openQuestion(tile, category, item) {
       if (tile.classList.contains("used") || tile.classList.contains("revealing")) return;
+      if (activeQuestion) return;
+
       tile.classList.add("revealing");
       tile.disabled = true;
+      activeCategory = category;
+      awaitingStealDecision = false;
+
+      Object.keys(lifelinesState).forEach((key) => {
+        lifelinesState[key] = false;
+      });
 
       setTimeout(() => {
         tile.classList.remove("revealing");
@@ -1358,29 +1367,13 @@
         answerText.classList.remove("show");
         showAnswerBtn.disabled = false;
         showAnswerBtn.textContent = "إظهار الإجابة";
+        setScoringButtonsVisibility(false);
+        setStealButtonsVisibility(false);
+        closeBtn.hidden = false;
+        resetLifelinesOutput();
         modal.classList.add("show");
+        startQuestionTimer();
       }, 260);
-      if (tile.classList.contains("used") || activeQuestion) return;
-      activeTile = tile;
-      activeQuestion = item;
-      activeCategory = category;
-
-      tile.classList.add("used");
-      tile.disabled = true;
-      awaitingStealDecision = false;
-
-      modalTitle.textContent = `${category} - ${item.points} نقطة`;
-      questionText.textContent = item.q;
-      answerText.textContent = `الإجابة: ${item.a}`;
-      answerText.classList.remove("show");
-      showAnswerBtn.disabled = false;
-      showAnswerBtn.textContent = "إظهار الإجابة";
-      resetLifelinesOutput();
-      setScoringButtonsVisibility(false);
-      setStealButtonsVisibility(false);
-      closeBtn.hidden = false;
-      modal.classList.add("show");
-      startQuestionTimer();
     }
 
     function markActiveTileUsed() {
@@ -1391,9 +1384,6 @@
 
     function completeQuestion() {
       if (!activeQuestion) return;
-      teams[teamIndex].score += activeQuestion.points;
-      showScorePop(teamIndex, activeQuestion.points);
-      currentTurnTeamId = teamIndex === 0 ? 1 : 0;
       markActiveTileUsed();
       closeModal({ switchTurnAfterClose: true });
     }
@@ -1426,11 +1416,18 @@
     function closeModal({ switchTurnAfterClose = false } = {}) {
       stopQuestionTimer();
       modal.classList.remove("show");
+      awaitingStealDecision = false;
+      setStealButtonsVisibility(false);
+      setScoringButtonsVisibility(false);
+      closeBtn.hidden = false;
       activeQuestion = null;
       activeTile = null;
       activeCategory = "";
       answerText.classList.remove("show");
       resetLifelinesOutput();
+      if (switchTurnAfterClose) {
+        switchTurn();
+      }
     }
 
     function useLifelineOptions() {
@@ -1489,13 +1486,14 @@
       lifelineOutput.innerHTML = `<div>تلميح قوي: ${hintText}</div>`;
       lifelinesState.strongHint = true;
       renderLifelinesState();
-      awaitingStealDecision = false;
-      answerText.classList.remove("show");
-      setScoringButtonsVisibility(false);
-      setStealButtonsVisibility(false);
-      if (switchTurnAfterClose) {
-        switchTurn();
+    }
+
+    function handleQuestionCloseRequest() {
+      if (activeQuestion) {
+        completeQuestion();
+        return;
       }
+      closeModal();
     }
 
     showAnswerBtn.addEventListener("click", () => {
@@ -1512,11 +1510,11 @@
     stealBtn.addEventListener("click", handleStealAttempt);
     skipStealBtn.addEventListener("click", completeQuestion);
 
-    closeBtn.addEventListener("click", closeModal);
+    closeBtn.addEventListener("click", handleQuestionCloseRequest);
 
     modal.addEventListener("click", (event) => {
       if (event.target === modal) {
-        closeModal();
+        handleQuestionCloseRequest();
       }
     });
 
