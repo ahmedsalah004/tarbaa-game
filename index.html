@@ -383,8 +383,15 @@
 
   <script>
     const DIFFICULTIES = [1, 2, 3, 4, 5];
+    const DIFFICULTY_POINTS = {
+      1: 100,
+      2: 200,
+      3: 300,
+      4: 400,
+      5: 500
+    };
 
-    const QUESTION_POOLS = {
+    const questionBank = {
       "القرآن الكريم": [
         { q: "ما هي أول سورة في القرآن الكريم؟", a: "سورة الفاتحة", difficulty: 1 },
         { q: "كم عدد سور القرآن الكريم؟", a: "114 سورة", difficulty: 1 },
@@ -541,13 +548,13 @@
     const newGameBtn = document.getElementById("newGameBtn");
 
     let currentGameData = [];
+    let currentTurnTeamId = 0;
 
     let activeTile = null;
     let activeQuestion = null;
-    let lastWinnerTeamId = null;
 
     function getPointsForDifficulty(difficulty) {
-      return difficulty * 100;
+      return DIFFICULTY_POINTS[difficulty] ?? 0;
     }
 
     function pickRandom(array) {
@@ -555,7 +562,7 @@
     }
 
     function buildGameDataFromPools() {
-      return Object.entries(QUESTION_POOLS).map(([category, pool]) => {
+      return Object.entries(questionBank).map(([category, pool]) => {
         const selectedQuestions = [];
         const usedQuestions = new Set();
 
@@ -564,17 +571,27 @@
             (item) => item.difficulty === difficulty && item.q && item.a && !usedQuestions.has(item.q)
           );
 
+          let chosen = null;
+
           if (candidates.length === 0) {
-            selectedQuestions.push({
-              q: `سؤال مستوى ${difficulty} غير متوفر حاليًا.`,
-              a: "يرجى تحديث بنك الأسئلة.",
-              difficulty,
-              points: getPointsForDifficulty(difficulty)
-            });
-            return;
+            console.error(`Missing questions for category "${category}" at difficulty ${difficulty}. Falling back to any unused question.`);
+            const fallbackCandidates = pool.filter(
+              (item) => item.q && item.a && !usedQuestions.has(item.q)
+            );
+            chosen = pickRandom(fallbackCandidates);
+          } else {
+            chosen = pickRandom(candidates);
           }
 
-          const chosen = pickRandom(candidates);
+          if (!chosen) {
+            console.error(`No unused fallback question available for category "${category}".`);
+            chosen = {
+              q: `تعذر تحميل سؤال لهذا المربع (${category}).`,
+              a: "يرجى مراجعة بنك الأسئلة.",
+              difficulty
+            };
+          }
+
           usedQuestions.add(chosen.q);
           selectedQuestions.push({
             q: chosen.q,
@@ -593,7 +610,7 @@
 
       teams.forEach((team) => {
         const card = document.createElement("div");
-        const isActive = lastWinnerTeamId === team.id;
+        const isActive = currentTurnTeamId === team.id;
         card.className = `team-card team-${team.id + 1}${isActive ? " active" : ""}`;
 
         card.innerHTML = `
@@ -666,7 +683,7 @@
     function awardPoints(teamIndex) {
       if (!activeQuestion) return;
       teams[teamIndex].score += activeQuestion.points;
-      lastWinnerTeamId = teamIndex;
+      currentTurnTeamId = teamIndex === 0 ? 1 : 0;
       renderScoreboard();
       closeModal();
     }
@@ -700,7 +717,6 @@
       teams.forEach((team) => {
         team.score = 0;
       });
-      lastWinnerTeamId = null;
       closeModal();
       renderScoreboard();
     });
@@ -709,7 +725,7 @@
       teams.forEach((team) => {
         team.score = 0;
       });
-      lastWinnerTeamId = null;
+      currentTurnTeamId = 0;
       currentGameData = buildGameDataFromPools();
       closeModal();
       renderScoreboard();
