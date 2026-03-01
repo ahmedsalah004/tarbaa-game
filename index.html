@@ -6,16 +6,22 @@
   <title>لعبة تربّع - مسابقة معلومات</title>
   <style>
     :root {
-      --bg: #0f172a;
+      --bg-1: #020617;
+      --bg-2: #0f172a;
+      --panel: rgba(15, 23, 42, 0.74);
+      --panel-strong: #111c34;
       --card: #1e293b;
-      --card-light: #334155;
-      --accent: #f59e0b;
+      --accent: #fbbf24;
       --accent-2: #22d3ee;
+      --team-1: #38bdf8;
+      --team-2: #f472b6;
       --good: #22c55e;
       --bad: #ef4444;
       --text: #f8fafc;
       --muted: #94a3b8;
-      --shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+      --shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+      --tile-shadow: 0 8px 16px rgba(37, 99, 235, 0.35);
+      --tile-glow: 0 0 0 rgba(59, 130, 246, 0.5);
     }
 
     * {
@@ -29,12 +35,15 @@
       direction: rtl;
       min-height: 100vh;
       color: var(--text);
-      background: radial-gradient(circle at top, #1e293b 0%, #020617 60%, #01040c 100%);
+      background:
+        radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.18) 0%, transparent 35%),
+        radial-gradient(circle at 80% 8%, rgba(244, 114, 182, 0.15) 0%, transparent 30%),
+        linear-gradient(165deg, var(--bg-2) 0%, var(--bg-1) 75%);
       padding: 24px;
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1260px;
       margin: 0 auto;
       display: grid;
       gap: 20px;
@@ -43,37 +52,55 @@
     .top {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 14px;
       justify-content: space-between;
       align-items: center;
-      background: rgba(30, 41, 59, 0.7);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 18px;
-      padding: 16px;
+      background: var(--panel);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 20px;
+      padding: 18px;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(7px);
     }
 
     h1 {
-      font-size: 1.75rem;
-      letter-spacing: 0.5px;
+      font-size: clamp(1.35rem, 2.3vw, 1.9rem);
+      letter-spacing: 0.4px;
       color: var(--accent);
+      text-shadow: 0 2px 12px rgba(251, 191, 36, 0.28);
     }
 
     .scoreboard {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
     }
 
     .team-card {
-      background: linear-gradient(160deg, #1e293b 10%, #0f172a 100%);
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: linear-gradient(160deg, #1e293b 8%, #0b1226 100%);
+      border: 1px solid rgba(148, 163, 184, 0.2);
       border-radius: 14px;
       padding: 10px 14px;
-      min-width: 180px;
+      min-width: 190px;
       display: grid;
       gap: 8px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .team-card.active {
+      transform: translateY(-3px) scale(1.02);
+      border-color: rgba(248, 250, 252, 0.55);
+      box-shadow: 0 0 0 1px rgba(248, 250, 252, 0.35), 0 12px 28px rgba(14, 165, 233, 0.3);
+    }
+
+    .team-card.team-1.active {
+      border-color: rgba(56, 189, 248, 0.95);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45), 0 12px 28px rgba(56, 189, 248, 0.35);
+    }
+
+    .team-card.team-2.active {
+      border-color: rgba(244, 114, 182, 0.95);
+      box-shadow: 0 0 0 1px rgba(244, 114, 182, 0.42), 0 12px 28px rgba(244, 114, 182, 0.3);
     }
 
     .team-name {
@@ -82,11 +109,13 @@
       align-items: center;
       font-weight: 700;
       color: var(--accent-2);
+      gap: 8px;
     }
 
     .team-score {
-      font-size: 1.5rem;
-      font-weight: 800;
+      font-size: 1.55rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
     }
 
     .controls {
@@ -99,38 +128,37 @@
     button {
       border: none;
       border-radius: 10px;
-      padding: 6px 10px;
-      font-size: 0.9rem;
+      padding: 7px 12px;
+      font-size: 0.92rem;
       cursor: pointer;
-      transition: transform 0.15s ease, opacity 0.2s ease;
+      color: #f8fafc;
+      transition: transform 0.22s cubic-bezier(.2,.9,.2,1), opacity 0.2s ease, box-shadow 0.22s ease, filter 0.2s ease;
     }
 
     button:hover {
       transform: translateY(-1px);
-      opacity: 0.95;
+      filter: brightness(1.04);
     }
 
-    .add {
-      background: var(--good);
-      color: white;
+    button:active {
+      transform: translateY(1px) scale(0.98);
     }
 
     .subtract {
-      background: var(--bad);
-      color: white;
+      background: linear-gradient(140deg, #ef4444, #b91c1c);
+      box-shadow: 0 6px 14px rgba(239, 68, 68, 0.3);
     }
 
     .award {
-      background: #16a34a;
-      color: white;
+      background: linear-gradient(140deg, #16a34a, #15803d);
       font-weight: 700;
+      box-shadow: 0 8px 16px rgba(34, 197, 94, 0.32);
     }
 
     .reset {
-      background: var(--card-light);
-      color: var(--text);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      padding: 10px 14px;
+      background: linear-gradient(140deg, #334155, #1e293b);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      padding: 10px 15px;
     }
 
     .board {
@@ -140,95 +168,148 @@
     }
 
     .column {
-      background: rgba(30, 41, 59, 0.65);
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(17, 28, 52, 0.64);
+      border: 1px solid rgba(148, 163, 184, 0.22);
       border-radius: 14px;
       overflow: hidden;
       box-shadow: var(--shadow);
     }
 
     .category {
-      background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
       text-align: center;
       font-size: 1rem;
       font-weight: 800;
       padding: 14px 8px;
-      min-height: 72px;
+      min-height: 76px;
       display: grid;
       place-items: center;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+      border-bottom: 1px solid rgba(248, 250, 252, 0.12);
     }
 
     .tile {
       width: 100%;
-      background: linear-gradient(160deg, #1d4ed8 0%, #1e3a8a 100%);
-      color: #fde68a;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      font-size: 1.5rem;
+      background: linear-gradient(165deg, #2563eb 0%, #1e3a8a 55%, #172554 100%);
+      color: #fef08a;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 1.6rem;
       font-weight: 900;
-      min-height: 84px;
+      min-height: 86px;
       border-radius: 0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+      will-change: transform, box-shadow;
+    }
+
+    .tile::after {
+      content: "";
+      position: absolute;
+      inset: -120% 30% auto;
+      height: 160%;
+      background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.24) 50%, transparent 100%);
+      transform: rotate(12deg);
+      transition: transform 0.6s ease;
+      pointer-events: none;
     }
 
     .tile:hover {
-      filter: brightness(1.1);
-      transform: none;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: var(--tile-shadow), 0 0 0 2px rgba(125, 211, 252, 0.35), 0 0 20px rgba(56, 189, 248, 0.42);
+      --tile-glow: 0 0 24px rgba(59, 130, 246, 0.52);
+    }
+
+    .tile:hover::after {
+      transform: translateY(20%) rotate(12deg);
+    }
+
+    .tile:active {
+      transform: translateY(0) scale(0.97);
     }
 
     .tile.used {
-      background: #0b1020;
-      color: #334155;
+      background: linear-gradient(155deg, #0b1020 0%, #111827 100%);
+      color: #475569;
       cursor: default;
       pointer-events: none;
+      box-shadow: inset 0 0 0 1px rgba(100, 116, 139, 0.2);
+      text-shadow: none;
+    }
+
+    .tile.used::after {
+      display: none;
     }
 
     .modal {
       position: fixed;
       inset: 0;
-      background: rgba(2, 6, 23, 0.76);
+      background: rgba(2, 6, 23, 0.8);
       display: none;
       justify-content: center;
       align-items: center;
       padding: 20px;
       z-index: 999;
+      opacity: 0;
+      transition: opacity 0.2s ease;
     }
 
     .modal.show {
       display: flex;
+      opacity: 1;
     }
 
     .dialog {
-      width: min(720px, 100%);
+      width: min(760px, 100%);
       background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
-      border: 1px solid rgba(148, 163, 184, 0.28);
+      border: 1px solid rgba(148, 163, 184, 0.34);
       border-radius: 20px;
-      padding: 22px;
-      box-shadow: var(--shadow);
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
       display: grid;
       gap: 16px;
       text-align: center;
+      transform: scale(0.96);
+      animation: popIn 0.22s ease forwards;
+    }
+
+    @keyframes popIn {
+      to {
+        transform: scale(1);
+      }
     }
 
     .dialog h2 {
       color: var(--accent);
-      font-size: 1.2rem;
+      font-size: 1.25rem;
+      text-shadow: 0 2px 10px rgba(251, 191, 36, 0.2);
     }
 
     .question {
-      font-size: 1.4rem;
-      line-height: 1.7;
+      font-size: clamp(1.18rem, 2.3vw, 1.45rem);
+      line-height: 1.75;
       font-weight: 700;
+      color: #f8fafc;
     }
 
     .answer {
-      display: none;
-      border-top: 1px dashed rgba(148, 163, 184, 0.4);
-      padding-top: 12px;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      border-top: 1px dashed rgba(148, 163, 184, 0.45);
+      margin-top: 0;
+      padding-top: 0;
       color: #e2e8f0;
       font-size: 1.15rem;
+      transition: max-height 0.3s ease, opacity 0.3s ease, padding-top 0.3s ease, margin-top 0.3s ease;
     }
 
     .answer.show {
-      display: block;
+      max-height: 140px;
+      opacity: 1;
+      margin-top: 8px;
+      padding-top: 12px;
     }
 
     .dialog-actions {
@@ -239,14 +320,15 @@
     }
 
     .primary {
-      background: var(--accent);
+      background: linear-gradient(135deg, #f59e0b, #f97316);
       color: #111827;
-      font-weight: 800;
+      font-weight: 900;
       padding: 10px 14px;
+      box-shadow: 0 8px 18px rgba(249, 115, 22, 0.38);
     }
 
     .secondary {
-      background: #334155;
+      background: linear-gradient(140deg, #475569, #334155);
       color: #f8fafc;
       padding: 10px 14px;
     }
@@ -299,6 +381,8 @@
   </div>
 
   <script>
+    const requiredPoints = [100, 200, 300, 400, 500];
+
     const gameData = [
       {
         category: "القرآن الكريم",
@@ -345,12 +429,14 @@
         questions: [
           { points: 100, q: "كم عدد لاعبي فريق كرة القدم داخل الملعب؟", a: "11 لاعبًا" },
           { points: 200, q: "ما اللغة الأكثر تحدثًا في العالم من حيث عدد المتحدثين الأصليين؟", a: "اللغة الصينية (الماندرين)" },
-          { points: 300, q: "من صاحب رواية " + "\"" + "البؤساء" + "\"" + "؟", a: "فيكتور هوغو" },
+          { points: 300, q: "من صاحب رواية \"البؤساء\"؟", a: "فيكتور هوغو" },
           { points: 400, q: "في أي دولة أقيمت كأس العالم 2022؟", a: "قطر" },
           { points: 500, q: "ما اسم أكبر محيط على سطح الأرض؟", a: "المحيط الهادئ" }
         ]
       }
     ];
+
+    const normalizedGameData = normalizeGameData(gameData);
 
     const teams = [
       { id: 0, name: "الفريق الأول", score: 0 },
@@ -371,13 +457,43 @@
 
     let activeTile = null;
     let activeQuestion = null;
+    let lastWinnerTeamId = null;
+
+    function normalizeGameData(rawData) {
+      return rawData.map((column) => {
+        const pointsMap = new Map();
+
+        column.questions.forEach((item) => {
+          if (requiredPoints.includes(item.points) && item.q && item.a) {
+            pointsMap.set(item.points, item);
+          }
+        });
+
+        const fixedQuestions = requiredPoints.map((point) => {
+          if (pointsMap.has(point)) return pointsMap.get(point);
+
+          console.warn(`Missing question for ${column.category} - ${point} points. Added placeholder.`);
+          return {
+            points: point,
+            q: `سؤال ${point} نقطة غير متوفر حاليًا.`,
+            a: "سيتم تحديث هذا السؤال لاحقًا."
+          };
+        });
+
+        return {
+          category: column.category,
+          questions: fixedQuestions
+        };
+      });
+    }
 
     function renderScoreboard() {
       scoreboardEl.innerHTML = "";
 
       teams.forEach((team) => {
         const card = document.createElement("div");
-        card.className = "team-card";
+        const isActive = lastWinnerTeamId === team.id;
+        card.className = `team-card team-${team.id + 1}${isActive ? " active" : ""}`;
 
         card.innerHTML = `
           <div class="team-name">${team.name}<span>${team.score} نقطة</span></div>
@@ -394,7 +510,9 @@
         btn.addEventListener("click", () => {
           const team = teams.find((t) => t.id === Number(btn.dataset.team));
           if (!team) return;
-          if (btn.dataset.type === "subtract") team.score = Math.max(0, team.score - 100);
+          if (btn.dataset.type === "subtract") {
+            team.score = Math.max(0, team.score - 100);
+          }
           renderScoreboard();
         });
       });
@@ -402,7 +520,7 @@
 
     function renderBoard() {
       boardEl.innerHTML = "";
-      gameData.forEach((columnData, colIdx) => {
+      normalizedGameData.forEach((columnData, colIdx) => {
         const column = document.createElement("div");
         column.className = "column";
 
@@ -417,6 +535,7 @@
           tile.textContent = item.points;
           tile.setAttribute("data-col", colIdx);
           tile.setAttribute("data-row", rowIdx);
+          tile.setAttribute("aria-label", `${columnData.category} - ${item.points} نقطة`);
 
           tile.addEventListener("click", () => openQuestion(tile, columnData.category, item));
           column.appendChild(tile);
@@ -427,8 +546,12 @@
     }
 
     function openQuestion(tile, category, item) {
+      if (tile.classList.contains("used")) return;
       activeTile = tile;
       activeQuestion = item;
+
+      tile.classList.add("used");
+      tile.disabled = true;
 
       modalTitle.textContent = `${category} - ${item.points} نقطة`;
       questionText.textContent = item.q;
@@ -439,35 +562,36 @@
       modal.classList.add("show");
     }
 
+    function awardPoints(teamIndex) {
+      if (!activeQuestion) return;
+      teams[teamIndex].score += activeQuestion.points;
+      lastWinnerTeamId = teamIndex;
+      renderScoreboard();
+      closeModal();
+    }
+
+    function closeModal() {
+      modal.classList.remove("show");
+      activeQuestion = null;
+      activeTile = null;
+      answerText.classList.remove("show");
+    }
+
     showAnswerBtn.addEventListener("click", () => {
       if (!activeQuestion) return;
       answerText.classList.add("show");
       showAnswerBtn.disabled = true;
       showAnswerBtn.textContent = "تم عرض الإجابة";
-      if (activeTile) activeTile.classList.add("used");
     });
 
-    awardTeam1.addEventListener("click", () => {
-      if (!activeQuestion) return;
-      teams[0].score += activeQuestion.points;
-      renderScoreboard();
-      modal.classList.remove("show");
-    });
+    awardTeam1.addEventListener("click", () => awardPoints(0));
+    awardTeam2.addEventListener("click", () => awardPoints(1));
 
-    awardTeam2.addEventListener("click", () => {
-      if (!activeQuestion) return;
-      teams[1].score += activeQuestion.points;
-      renderScoreboard();
-      modal.classList.remove("show");
-    });
-
-    closeBtn.addEventListener("click", () => {
-      modal.classList.remove("show");
-    });
+    closeBtn.addEventListener("click", closeModal);
 
     modal.addEventListener("click", (event) => {
       if (event.target === modal) {
-        modal.classList.remove("show");
+        closeModal();
       }
     });
 
@@ -475,7 +599,10 @@
       teams.forEach((team) => {
         team.score = 0;
       });
+      lastWinnerTeamId = null;
+      closeModal();
       renderScoreboard();
+      renderBoard();
     });
 
     renderScoreboard();
