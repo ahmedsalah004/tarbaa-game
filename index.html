@@ -1207,26 +1207,7 @@
 
     function buildGameDataFromPools() {
       const categoriesForGame = getCategoriesForGame();
-      return categoriesForGame.map((category) => {
-        const pool = questionBank[category] || [];
-
-        const selectedQuestions = DIFFICULTIES.map((difficulty) => {
-          const candidates = pool.filter((item) => item.difficulty === difficulty && item.q && item.a);
-          const chosen = candidates.length ? pickRandom(candidates) : null;
-
-          if (!chosen) {
-            console.error(`Missing question for category "${category}" at difficulty ${difficulty}.`);
-            return {
-              q: `⚠️ لا يوجد سؤال صعوبة ${difficulty} في فئة ${category}`,
-              a: "يرجى ضبط بنك الأسئلة من لوحة الإدارة.",
-              difficulty,
-              points: getPointsForDifficulty(difficulty)
-            };
-          }
-
-          return {
       const usedQuestionsByCategory = loadUsedQuestionsByCategory();
-
       const gameData = categoriesForGame.map((category) => {
         const pool = (questionBank[category] || []).filter((item) => item.id && item.q && item.a);
         const selectedQuestions = [];
@@ -1277,7 +1258,7 @@
             type: chosen.type,
             difficulty,
             points: getPointsForDifficulty(difficulty)
-          };
+          });
         });
 
         usedQuestionsByCategory[category] = [...new Set([...(usedQuestionsByCategory[category] || []), ...selectedQuestions.map((item) => item.id)])];
