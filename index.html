@@ -801,6 +801,7 @@
       4: 400,
       5: 500
     };
+    const USED_QUESTIONS_STORAGE_KEY = "usedQuestions";
 
     let questionBank = {
       "القرآن الكريم": [
@@ -982,6 +983,60 @@
     const MIN_TIMER_SECONDS = 5;
     const MAX_TIMER_SECONDS = 60;
 
+    function sanitizeIdPart(value) {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^\w\u0600-\u06FF]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "question";
+    }
+
+    function normalizeQuestionBank(rawBank) {
+      const normalizedBank = {};
+      const usedIds = new Set();
+
+      Object.entries(rawBank || {}).forEach(([category, items], categoryIndex) => {
+        const categoryPrefix = sanitizeIdPart(category) || `category_${categoryIndex + 1}`;
+        normalizedBank[category] = (Array.isArray(items) ? items : []).map((item, index) => {
+          const normalizedItem = { ...item };
+          let candidateId = typeof normalizedItem.id === "string" ? normalizedItem.id.trim() : "";
+
+          if (!candidateId) {
+            candidateId = `${categoryPrefix}_${index + 1}`;
+          }
+
+          let uniqueId = sanitizeIdPart(candidateId);
+          let suffix = 1;
+          while (usedIds.has(uniqueId)) {
+            suffix += 1;
+            uniqueId = `${sanitizeIdPart(candidateId)}_${suffix}`;
+          }
+
+          normalizedItem.id = uniqueId;
+          usedIds.add(uniqueId);
+          return normalizedItem;
+        });
+      });
+
+      return normalizedBank;
+    }
+
+    function loadUsedQuestionsByCategory() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(USED_QUESTIONS_STORAGE_KEY) || "{}");
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+        return parsed;
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function saveUsedQuestionsByCategory(data) {
+      localStorage.setItem(USED_QUESTIONS_STORAGE_KEY, JSON.stringify(data));
+    }
+
+    questionBank = normalizeQuestionBank(questionBank);
+
     const boardEl = document.getElementById("board");
     const scoreboardEl = document.getElementById("scoreboard");
     const modal = document.getElementById("modal");
@@ -1093,22 +1148,32 @@
 
     function buildGameDataFromPools() {
       const categoriesForGame = getCategoriesForGame();
-      return categoriesForGame.map((category) => {
-        const pool = questionBank[category] || [];
+      const usedQuestionsByCategory = loadUsedQuestionsByCategory();
+
+      const gameData = categoriesForGame.map((category) => {
+        const pool = (questionBank[category] || []).filter((item) => item.id && item.q && item.a);
         const selectedQuestions = [];
-        const usedQuestions = new Set();
+        let categoryUsedIds = new Set(usedQuestionsByCategory[category] || []);
+        let unusedPool = pool.filter((item) => !categoryUsedIds.has(item.id));
+
+        if (unusedPool.length < DIFFICULTIES.length) {
+          categoryUsedIds = new Set();
+          unusedPool = [...pool];
+        }
+
+        const usedThisRound = new Set();
 
         DIFFICULTIES.forEach((difficulty) => {
-          const candidates = pool.filter(
-            (item) => item.difficulty === difficulty && item.q && item.a && !usedQuestions.has(item.q)
+          const candidates = unusedPool.filter(
+            (item) => item.difficulty === difficulty && !usedThisRound.has(item.id)
           );
 
           let chosen = null;
 
           if (candidates.length === 0) {
             console.error(`Missing questions for category "${category}" at difficulty ${difficulty}. Falling back to any unused question.`);
-            const fallbackCandidates = pool.filter(
-              (item) => item.q && item.a && !usedQuestions.has(item.q)
+            const fallbackCandidates = unusedPool.filter(
+              (item) => !usedThisRound.has(item.id)
             );
             chosen = pickRandom(fallbackCandidates);
           } else {
@@ -1118,14 +1183,16 @@
           if (!chosen) {
             console.error(`No unused fallback question available for category "${category}".`);
             chosen = {
+              id: `${sanitizeIdPart(category)}_missing_${difficulty}`,
               q: `تعذر تحميل سؤال لهذا المربع (${category}).`,
               a: "يرجى مراجعة بنك الأسئلة.",
               difficulty
             };
           }
 
-          usedQuestions.add(chosen.q);
+          usedThisRound.add(chosen.id);
           selectedQuestions.push({
+            id: chosen.id,
             q: chosen.q,
             a: chosen.a,
             hint: chosen.hint,
@@ -1135,8 +1202,12 @@
           });
         });
 
+        usedQuestionsByCategory[category] = [...new Set([...(usedQuestionsByCategory[category] || []), ...selectedQuestions.map((item) => item.id)])];
         return { category, questions: selectedQuestions };
       });
+
+      saveUsedQuestionsByCategory(usedQuestionsByCategory);
+      return gameData;
     }
 
     function detectAnswerType(answer) {
@@ -1621,6 +1692,9 @@
           if (!Number.isInteger(item.difficulty) || item.difficulty < 1 || item.difficulty > 5) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: difficulty يجب أن يكون بين 1 و 5.`);
           }
+          if (item.id !== undefined && (typeof item.id !== "string" || !item.id.trim())) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: إذا وُجد الحقل id فيجب أن يكون نصًا غير فارغ.`);
+          }
         });
       });
 
@@ -1689,7 +1763,7 @@
           return;
         }
 
-        questionBank = parsed;
+        questionBank = normalizeQuestionBank(parsed);
         setImportErrors(["تم الاستيراد بنجاح. سيتم بدء لعبة جديدة بالبيانات الجديدة."]);
         startNewGame();
       } catch (error) {
