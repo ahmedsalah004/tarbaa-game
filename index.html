@@ -63,6 +63,13 @@
       backdrop-filter: blur(7px);
     }
 
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
     h1 {
       font-size: clamp(1.35rem, 2.3vw, 1.9rem);
       letter-spacing: 0.4px;
@@ -76,7 +83,49 @@
       flex-wrap: wrap;
     }
 
+    .status-row {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--text);
+    }
+
+    .turn-indicator {
+      font-weight: 800;
+      color: var(--accent-2);
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+
+    .timer-settings {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 10px;
+      padding: 6px 10px;
+    }
+
+    .timer-settings button {
+      padding: 4px 10px;
+      background: linear-gradient(140deg, #334155, #1e293b);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+    }
+
+    .timer-settings span {
+      font-weight: 700;
+      min-width: 110px;
+      text-align: center;
+    }
+
     .team-card {
+      position: relative;
       background: linear-gradient(160deg, #1e293b 8%, #0b1226 100%);
       border: 1px solid rgba(148, 163, 184, 0.2);
       border-radius: 14px;
@@ -116,6 +165,35 @@
       font-size: 1.55rem;
       font-weight: 900;
       letter-spacing: 0.5px;
+    }
+
+    .score-pop {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      font-weight: 900;
+      opacity: 0;
+      transform: translateY(0) scale(0.8);
+      pointer-events: none;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .score-pop.show {
+      animation: scorePop 0.9s ease forwards;
+    }
+
+    .score-pop.positive {
+      color: #86efac;
+    }
+
+    .score-pop.negative {
+      color: #fca5a5;
+    }
+
+    @keyframes scorePop {
+      0% { opacity: 0; transform: translateY(8px) scale(0.7); }
+      25% { opacity: 1; transform: translateY(-2px) scale(1); }
+      100% { opacity: 0; transform: translateY(-24px) scale(0.95); }
     }
 
     .controls {
@@ -201,7 +279,8 @@
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
       position: relative;
       overflow: hidden;
-      will-change: transform, box-shadow;
+      will-change: transform, box-shadow, filter;
+      transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease, opacity 0.24s ease;
     }
 
     .tile::after {
@@ -216,8 +295,8 @@
     }
 
     .tile:hover {
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: var(--tile-shadow), 0 0 0 2px rgba(125, 211, 252, 0.35), 0 0 20px rgba(56, 189, 248, 0.42);
+      transform: translateY(-3px) scale(1.035);
+      box-shadow: var(--tile-shadow), 0 0 0 2px rgba(125, 211, 252, 0.45), 0 0 24px rgba(56, 189, 248, 0.55);
       --tile-glow: 0 0 24px rgba(59, 130, 246, 0.52);
     }
 
@@ -232,14 +311,28 @@
     .tile.used {
       background: linear-gradient(155deg, #0b1020 0%, #111827 100%);
       color: #475569;
-      cursor: default;
+      cursor: not-allowed;
       pointer-events: none;
       box-shadow: inset 0 0 0 1px rgba(100, 116, 139, 0.2);
       text-shadow: none;
+      filter: grayscale(0.35);
+      opacity: 0.55;
+      transform: scale(0.97);
     }
 
     .tile.used::after {
       display: none;
+    }
+
+    .tile.revealing {
+      animation: tileReveal 0.34s cubic-bezier(.25,.75,.2,1) forwards;
+      pointer-events: none;
+    }
+
+    @keyframes tileReveal {
+      0% { transform: scale(1); }
+      50% { transform: rotateY(78deg) scale(1.05); filter: brightness(1.18); }
+      100% { transform: rotateY(0deg) scale(0.97); }
     }
 
     .modal {
@@ -310,6 +403,12 @@
       opacity: 1;
       margin-top: 8px;
       padding-top: 12px;
+    }
+
+    .timer-display {
+      font-weight: 900;
+      color: var(--accent-2);
+      font-size: 1.1rem;
     }
 
     .dialog-actions {
@@ -438,11 +537,115 @@
       color: #fef3c7;
       font-weight: 800;
       font-size: 1.25rem;
+    .turn-indicator {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-weight: 700;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    .panel-dialog {
+      width: min(920px, 100%);
+      text-align: right;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 14px;
+      text-align: right;
+    }
+
+    .panel-box {
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .panel-box h3 {
+      color: #7dd3fc;
+      font-size: 1rem;
+    }
+
+    .admin-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    textarea, select, input[type="number"], input[type="file"] {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.9);
+      color: #f8fafc;
+      padding: 8px 10px;
+      font-size: 0.95rem;
+    }
+
+    textarea {
+      min-height: 130px;
+      resize: vertical;
+      direction: ltr;
+      text-align: left;
+    }
+
+    .error-box {
+      min-height: 36px;
+      color: #fca5a5;
+      background: rgba(127, 29, 29, 0.2);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      border-radius: 10px;
+      padding: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .error-box.show {
+      display: block;
+    }
+
+    body.tv-mode {
+      font-size: 1.16rem;
+      padding: 18px;
+    }
+
+    body.tv-mode .top,
+    body.tv-mode .column,
+    body.tv-mode .dialog {
+      border-width: 2px;
+    }
+
+    body.tv-mode .tile {
+      min-height: 104px;
+      font-size: 2rem;
+    }
+
+    body.tv-mode .category {
+      min-height: 94px;
+      font-size: 1.2rem;
+    }
+
+    body.tv-mode .team-score {
+      font-size: 2.1rem;
     }
 
     @media (max-width: 960px) {
+      body {
+        padding: 14px;
+      }
+
       .board {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+        gap: 8px;
       }
 
       .tile {
@@ -450,7 +653,30 @@
       }
 
       .category {
-        min-height: auto;
+        min-height: 62px;
+        font-size: 0.9rem;
+        padding: 8px;
+      }
+
+      .team-card {
+        min-width: 155px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .board {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+      }
+
+      .tile {
+        min-height: 64px;
+        font-size: 1.2rem;
+      }
+
+      .top {
+        position: sticky;
+        top: 8px;
+        z-index: 10;
       }
     }
   </style>
@@ -460,8 +686,22 @@
     <div class="top">
       <h1>🎯 لعبة تربّع - تحدي المعرفة</h1>
       <div class="scoreboard" id="scoreboard"></div>
+      <div class="header-actions">
+        <div class="turn-indicator" id="turnIndicator"></div>
+        <button class="reset" id="tvModeBtn">⛶ وضع التلفاز</button>
+        <button class="reset" id="adminBtn">⚙️ الإدارة</button>
+        <button class="reset" id="newGameBtn">لعبة جديدة</button>
+        <button class="reset" id="resetBtn">إعادة ضبط النقاط</button>
       <button class="reset" id="newGameBtn">لعبة جديدة</button>
       <button class="reset" id="resetBtn">إعادة ضبط النقاط</button>
+      <div class="status-row">
+        <div class="turn-indicator" id="turnIndicator">الدور: الفريق 1</div>
+        <div class="timer-settings">
+          <button id="timerPlusBtn" aria-label="زيادة وقت المؤقت">+</button>
+          <span id="timerSettingLabel">الوقت: 15 ثانية</span>
+          <button id="timerMinusBtn" aria-label="تقليل وقت المؤقت">-</button>
+        </div>
+      </div>
     </div>
 
     <div class="admin-panel">
@@ -488,6 +728,7 @@
       </div>
       <h2 id="modalTitle"></h2>
       <p class="question" id="questionText"></p>
+      <p class="timer-display" id="timerDisplay">الوقت المتبقي: 15 ثانية</p>
       <p class="answer" id="answerText"></p>
       <div class="lifelines">
         <div class="lifeline-buttons">
@@ -499,9 +740,54 @@
       </div>
       <div class="dialog-actions">
         <button class="primary" id="showAnswerBtn">إظهار الإجابة</button>
-        <button class="award" id="awardTeam1">احتساب للفريق الأول</button>
-        <button class="award" id="awardTeam2">احتساب للفريق الثاني</button>
+        <button class="award" id="correctBtn" hidden>صحيح</button>
+        <button class="subtract" id="wrongBtn" hidden>خطأ</button>
+        <button class="award" id="stealBtn" hidden>سرقة للفريق الآخر</button>
+        <button class="secondary" id="skipStealBtn" hidden>بدون سرقة</button>
         <button class="secondary" id="closeBtn">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="adminModal">
+    <div class="dialog panel-dialog">
+      <h2>لوحة الإدارة</h2>
+      <div class="admin-grid">
+        <div class="panel-box">
+          <h3>تصدير بنك الأسئلة</h3>
+          <div class="admin-actions">
+            <button class="primary" id="copyJsonBtn">نسخ JSON</button>
+            <button class="secondary" id="downloadJsonBtn">تحميل JSON</button>
+          </div>
+        </div>
+
+        <div class="panel-box">
+          <h3>استيراد بنك الأسئلة</h3>
+          <textarea id="importText" placeholder="الصق JSON هنا..."></textarea>
+          <input type="file" id="importFile" accept="application/json,.json" />
+          <div class="admin-actions">
+            <button class="award" id="applyImportBtn">تطبيق الاستيراد</button>
+          </div>
+          <div class="error-box" id="importErrors"></div>
+        </div>
+
+        <div class="panel-box">
+          <h3>إعدادات الجولة</h3>
+          <label>مدة المؤقت (ثانية)
+            <input type="number" id="timerSecondsInput" min="5" max="300" step="5" />
+          </label>
+          <label>نمط نقاط السرقة
+            <select id="stealModeSelect">
+              <option value="full">كامل</option>
+              <option value="half">نصف</option>
+              <option value="off">إيقاف</option>
+            </select>
+          </label>
+          <button class="primary" id="saveSettingsBtn">حفظ الإعدادات</button>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary" id="closeAdminBtn">إغلاق</button>
       </div>
     </div>
   </div>
@@ -516,7 +802,7 @@
       5: 500
     };
 
-    const questionBank = {
+    let questionBank = {
       "القرآن الكريم": [
         { q: "ما هي أول سورة في القرآن الكريم؟", a: "سورة الفاتحة", difficulty: 1 },
         { q: "كم عدد سور القرآن الكريم؟", a: "114 سورة", difficulty: 1 },
@@ -692,6 +978,9 @@
       { id: 0, name: "الفريق الأول", score: 0 },
       { id: 1, name: "الفريق الثاني", score: 0 }
     ];
+    const STEAL_POINTS_MULTIPLIER = 1;
+    const MIN_TIMER_SECONDS = 5;
+    const MAX_TIMER_SECONDS = 60;
 
     const boardEl = document.getElementById("board");
     const scoreboardEl = document.getElementById("scoreboard");
@@ -700,10 +989,17 @@
     const modalTitle = document.getElementById("modalTitle");
     const questionText = document.getElementById("questionText");
     const answerText = document.getElementById("answerText");
+    const timerDisplay = document.getElementById("timerDisplay");
     const showAnswerBtn = document.getElementById("showAnswerBtn");
     const closeBtn = document.getElementById("closeBtn");
-    const awardTeam1 = document.getElementById("awardTeam1");
-    const awardTeam2 = document.getElementById("awardTeam2");
+    const correctBtn = document.getElementById("correctBtn");
+    const wrongBtn = document.getElementById("wrongBtn");
+    const stealBtn = document.getElementById("stealBtn");
+    const skipStealBtn = document.getElementById("skipStealBtn");
+    const turnIndicator = document.getElementById("turnIndicator");
+    const timerPlusBtn = document.getElementById("timerPlusBtn");
+    const timerMinusBtn = document.getElementById("timerMinusBtn");
+    const timerSettingLabel = document.getElementById("timerSettingLabel");
     const resetBtn = document.getElementById("resetBtn");
     const newGameBtn = document.getElementById("newGameBtn");
     const manualCategoriesEl = document.getElementById("manualCategories");
@@ -714,9 +1010,29 @@
     const lifelineOutput = document.getElementById("lifelineOutput");
     const friendOverlay = document.getElementById("friendOverlay");
     const friendCountdown = document.getElementById("friendCountdown");
+    const turnIndicator = document.getElementById("turnIndicator");
+    const tvModeBtn = document.getElementById("tvModeBtn");
+    const adminBtn = document.getElementById("adminBtn");
+    const adminModal = document.getElementById("adminModal");
+    const closeAdminBtn = document.getElementById("closeAdminBtn");
+    const copyJsonBtn = document.getElementById("copyJsonBtn");
+    const downloadJsonBtn = document.getElementById("downloadJsonBtn");
+    const importText = document.getElementById("importText");
+    const importFile = document.getElementById("importFile");
+    const applyImportBtn = document.getElementById("applyImportBtn");
+    const importErrors = document.getElementById("importErrors");
+    const timerSecondsInput = document.getElementById("timerSecondsInput");
+    const stealModeSelect = document.getElementById("stealModeSelect");
+    const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+
+    const gameSettings = {
+      timerSeconds: 30,
+      stealMode: "full"
+    };
 
     let currentGameData = [];
     let currentTurnTeamId = 0;
+    let turnTimerSeconds = 15;
 
     let activeTile = null;
     let activeQuestion = null;
@@ -729,6 +1045,20 @@
       friend: false,
       strongHint: false
     };
+    let timeRemaining = turnTimerSeconds;
+    let timerInterval = null;
+    let awaitingStealDecision = false;
+
+    function showScorePop(teamId, amount) {
+      const card = scoreboardEl.querySelector(`.team-card[data-team-id="${teamId}"]`);
+      if (!card) return;
+      const pop = card.querySelector(".score-pop");
+      if (!pop) return;
+      pop.className = `score-pop ${amount >= 0 ? "positive" : "negative"}`;
+      pop.textContent = `${amount >= 0 ? "+" : "-"}${Math.abs(amount)}`;
+      void pop.offsetWidth;
+      pop.classList.add("show");
+    }
 
     function getPointsForDifficulty(difficulty) {
       return DIFFICULTY_POINTS[difficulty] ?? 0;
@@ -902,6 +1232,7 @@
         const card = document.createElement("div");
         const isActive = currentTurnTeamId === team.id;
         card.className = `team-card team-${team.id + 1}${isActive ? " active" : ""}`;
+        card.dataset.teamId = String(team.id);
 
         card.innerHTML = `
           <div class="team-name">${team.name}<span>${team.score} نقطة</span></div>
@@ -909,6 +1240,7 @@
             <button class="subtract" data-team="${team.id}" data-type="subtract">خصم 100</button>
           </div>
           <div class="team-score">${team.score}</div>
+          <div class="score-pop" aria-hidden="true"></div>
         `;
 
         scoreboardEl.appendChild(card);
@@ -920,10 +1252,67 @@
           if (!team) return;
           if (btn.dataset.type === "subtract") {
             team.score = Math.max(0, team.score - 100);
+            showScorePop(team.id, -100);
           }
           renderScoreboard();
         });
       });
+
+      turnIndicator.textContent = `الدور الآن: ${teams[currentTurnTeamId].name}`;
+    }
+
+    function updateTurnIndicator() {
+      turnIndicator.textContent = `الدور: الفريق ${currentTurnTeamId + 1}`;
+    }
+
+    function updateTimerSettingLabel() {
+      timerSettingLabel.textContent = `الوقت: ${turnTimerSeconds} ثانية`;
+    }
+
+    function updateTimerDisplay() {
+      timerDisplay.textContent = `الوقت المتبقي: ${timeRemaining} ثانية`;
+    }
+
+    function stopQuestionTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function switchTurn() {
+      currentTurnTeamId = currentTurnTeamId === 0 ? 1 : 0;
+      updateTurnIndicator();
+      renderScoreboard();
+    }
+
+    function setScoringButtonsVisibility(isVisible) {
+      correctBtn.hidden = !isVisible;
+      wrongBtn.hidden = !isVisible;
+    }
+
+    function setStealButtonsVisibility(isVisible) {
+      stealBtn.hidden = !isVisible;
+      skipStealBtn.hidden = !isVisible;
+    }
+
+    function startQuestionTimer() {
+      stopQuestionTimer();
+      timeRemaining = turnTimerSeconds;
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        if (!activeQuestion) {
+          stopQuestionTimer();
+          return;
+        }
+
+        timeRemaining -= 1;
+        updateTimerDisplay();
+
+        if (timeRemaining <= 0) {
+          completeQuestion();
+        }
+      }, 1000);
     }
 
     function renderBoard() {
@@ -954,13 +1343,32 @@
     }
 
     function openQuestion(tile, category, item) {
-      if (tile.classList.contains("used")) return;
+      if (tile.classList.contains("used") || tile.classList.contains("revealing")) return;
+      tile.classList.add("revealing");
+      tile.disabled = true;
+
+      setTimeout(() => {
+        tile.classList.remove("revealing");
+        tile.classList.add("used");
+        activeTile = tile;
+        activeQuestion = item;
+
+        modalTitle.textContent = `${category} - ${item.points} نقطة`;
+        questionText.textContent = item.q;
+        answerText.textContent = `الإجابة: ${item.a}`;
+        answerText.classList.remove("show");
+        showAnswerBtn.disabled = false;
+        showAnswerBtn.textContent = "إظهار الإجابة";
+        modal.classList.add("show");
+      }, 260);
+      if (tile.classList.contains("used") || activeQuestion) return;
       activeTile = tile;
       activeQuestion = item;
       activeCategory = category;
 
       tile.classList.add("used");
       tile.disabled = true;
+      awaitingStealDecision = false;
 
       modalTitle.textContent = `${category} - ${item.points} نقطة`;
       questionText.textContent = item.q;
@@ -969,18 +1377,55 @@
       showAnswerBtn.disabled = false;
       showAnswerBtn.textContent = "إظهار الإجابة";
       resetLifelinesOutput();
+      setScoringButtonsVisibility(false);
+      setStealButtonsVisibility(false);
+      closeBtn.hidden = false;
       modal.classList.add("show");
+      startQuestionTimer();
     }
 
-    function awardPoints(teamIndex) {
+    function markActiveTileUsed() {
+      if (!activeTile) return;
+      activeTile.classList.add("used");
+      activeTile.disabled = true;
+    }
+
+    function completeQuestion() {
       if (!activeQuestion) return;
       teams[teamIndex].score += activeQuestion.points;
+      showScorePop(teamIndex, activeQuestion.points);
       currentTurnTeamId = teamIndex === 0 ? 1 : 0;
-      renderScoreboard();
-      closeModal();
+      markActiveTileUsed();
+      closeModal({ switchTurnAfterClose: true });
     }
 
-    function closeModal() {
+    function handleCorrectAnswer() {
+      if (!activeQuestion || !answerText.classList.contains("show")) return;
+      teams[currentTurnTeamId].score += activeQuestion.points;
+      renderScoreboard();
+      completeQuestion();
+    }
+
+    function handleWrongAnswer() {
+      if (!activeQuestion || !answerText.classList.contains("show")) return;
+      teams[currentTurnTeamId].score = Math.max(0, teams[currentTurnTeamId].score - activeQuestion.points);
+      awaitingStealDecision = true;
+      renderScoreboard();
+      setScoringButtonsVisibility(false);
+      setStealButtonsVisibility(true);
+    }
+
+    function handleStealAttempt() {
+      if (!activeQuestion || !awaitingStealDecision) return;
+      const otherTeamId = currentTurnTeamId === 0 ? 1 : 0;
+      const stealPoints = Math.round(activeQuestion.points * STEAL_POINTS_MULTIPLIER);
+      teams[otherTeamId].score += stealPoints;
+      renderScoreboard();
+      completeQuestion();
+    }
+
+    function closeModal({ switchTurnAfterClose = false } = {}) {
+      stopQuestionTimer();
       modal.classList.remove("show");
       activeQuestion = null;
       activeTile = null;
@@ -1045,6 +1490,13 @@
       lifelineOutput.innerHTML = `<div>تلميح قوي: ${hintText}</div>`;
       lifelinesState.strongHint = true;
       renderLifelinesState();
+      awaitingStealDecision = false;
+      answerText.classList.remove("show");
+      setScoringButtonsVisibility(false);
+      setStealButtonsVisibility(false);
+      if (switchTurnAfterClose) {
+        switchTurn();
+      }
     }
 
     showAnswerBtn.addEventListener("click", () => {
@@ -1052,10 +1504,14 @@
       answerText.classList.add("show");
       showAnswerBtn.disabled = true;
       showAnswerBtn.textContent = "تم عرض الإجابة";
+      setScoringButtonsVisibility(true);
+      closeBtn.hidden = true;
     });
 
-    awardTeam1.addEventListener("click", () => awardPoints(0));
-    awardTeam2.addEventListener("click", () => awardPoints(1));
+    correctBtn.addEventListener("click", handleCorrectAnswer);
+    wrongBtn.addEventListener("click", handleWrongAnswer);
+    stealBtn.addEventListener("click", handleStealAttempt);
+    skipStealBtn.addEventListener("click", completeQuestion);
 
     closeBtn.addEventListener("click", closeModal);
 
@@ -1071,6 +1527,25 @@
       });
       closeModal();
       renderScoreboard();
+      updateTurnIndicator();
+    });
+
+    timerPlusBtn.addEventListener("click", () => {
+      turnTimerSeconds = Math.min(MAX_TIMER_SECONDS, turnTimerSeconds + 1);
+      updateTimerSettingLabel();
+      if (activeQuestion) {
+        timeRemaining = Math.min(timeRemaining + 1, MAX_TIMER_SECONDS);
+        updateTimerDisplay();
+      }
+    });
+
+    timerMinusBtn.addEventListener("click", () => {
+      turnTimerSeconds = Math.max(MIN_TIMER_SECONDS, turnTimerSeconds - 1);
+      updateTimerSettingLabel();
+      if (activeQuestion) {
+        timeRemaining = Math.max(timeRemaining - 1, 0);
+        updateTimerDisplay();
+      }
     });
 
     document.querySelectorAll('input[name="categoryMode"]').forEach((radio) => {
@@ -1095,9 +1570,170 @@
       currentGameData = buildGameDataFromPools();
       closeModal();
       renderScoreboard();
+      updateTurnIndicator();
+      updateTimerSettingLabel();
       renderBoard();
       renderLifelinesState();
     }
+
+    function getExportJson() {
+      return JSON.stringify(questionBank, null, 2);
+    }
+
+    function setImportErrors(errors) {
+      if (!errors.length) {
+        importErrors.classList.remove("show");
+        importErrors.innerHTML = "";
+        return;
+      }
+
+      importErrors.innerHTML = errors.map((err) => `• ${err}`).join("<br>");
+      importErrors.classList.add("show");
+    }
+
+    function validateQuestionBank(data) {
+      const errors = [];
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        return ["البيانات ليست كائن JSON صالح لبنك الأسئلة."];
+      }
+
+      const categories = Object.keys(data);
+      if (categories.length !== 5) {
+        errors.push("يجب أن يحتوي بنك الأسئلة على 5 فئات بالضبط.");
+      }
+
+      categories.forEach((category) => {
+        const items = data[category];
+        if (!Array.isArray(items) || !items.length) {
+          errors.push(`الفئة "${category}" يجب أن تحتوي قائمة أسئلة غير فارغة.`);
+          return;
+        }
+
+        items.forEach((item, idx) => {
+          if (!item || typeof item !== "object") {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1} غير صالح.`);
+            return;
+          }
+
+          if (typeof item.q !== "string" || !item.q.trim()) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل q مطلوب.`);
+          }
+          if (typeof item.a !== "string" || !item.a.trim()) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل a مطلوب.`);
+          }
+          if (!Number.isInteger(item.difficulty) || item.difficulty < 1 || item.difficulty > 5) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: difficulty يجب أن يكون بين 1 و 5.`);
+          }
+        });
+      });
+
+      return errors;
+    }
+
+    async function copyToClipboard(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+
+      const temp = document.createElement("textarea");
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      temp.remove();
+    }
+
+    adminBtn.addEventListener("click", () => {
+      timerSecondsInput.value = String(gameSettings.timerSeconds);
+      stealModeSelect.value = gameSettings.stealMode;
+      setImportErrors([]);
+      adminModal.classList.add("show");
+    });
+
+    closeAdminBtn.addEventListener("click", () => adminModal.classList.remove("show"));
+
+    adminModal.addEventListener("click", (event) => {
+      if (event.target === adminModal) {
+        adminModal.classList.remove("show");
+      }
+    });
+
+    copyJsonBtn.addEventListener("click", async () => {
+      try {
+        await copyToClipboard(getExportJson());
+        setImportErrors(["تم نسخ JSON إلى الحافظة بنجاح."]);
+      } catch (error) {
+        setImportErrors(["تعذر النسخ إلى الحافظة."]);
+      }
+    });
+
+    downloadJsonBtn.addEventListener("click", () => {
+      const blob = new Blob([getExportJson()], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "question-bank.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+
+    importFile.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      importText.value = await file.text();
+    });
+
+    applyImportBtn.addEventListener("click", () => {
+      try {
+        const parsed = JSON.parse(importText.value);
+        const errors = validateQuestionBank(parsed);
+        if (errors.length) {
+          setImportErrors(errors);
+          return;
+        }
+
+        questionBank = parsed;
+        setImportErrors(["تم الاستيراد بنجاح. سيتم بدء لعبة جديدة بالبيانات الجديدة."]);
+        startNewGame();
+      } catch (error) {
+        setImportErrors(["JSON غير صالح. تحقق من البنية وحاول مجددًا."]);
+      }
+    });
+
+    saveSettingsBtn.addEventListener("click", () => {
+      const timerValue = Number(timerSecondsInput.value);
+      if (!Number.isInteger(timerValue) || timerValue < 5 || timerValue > 300) {
+        setImportErrors(["مدة المؤقت يجب أن تكون رقمًا صحيحًا بين 5 و 300 ثانية."]);
+        return;
+      }
+
+      gameSettings.timerSeconds = timerValue;
+      gameSettings.stealMode = stealModeSelect.value;
+      setImportErrors([`تم حفظ الإعدادات: مؤقت ${timerValue}ث، وضع السرقة ${gameSettings.stealMode}.`]);
+    });
+
+    tvModeBtn.addEventListener("click", async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+          document.body.classList.add("tv-mode");
+          tvModeBtn.textContent = "⛶ إنهاء وضع التلفاز";
+        } else {
+          await document.exitFullscreen();
+          document.body.classList.remove("tv-mode");
+          tvModeBtn.textContent = "⛶ وضع التلفاز";
+        }
+      } catch (error) {
+        document.body.classList.toggle("tv-mode");
+      }
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      if (!document.fullscreenElement) {
+        document.body.classList.remove("tv-mode");
+        tvModeBtn.textContent = "⛶ وضع التلفاز";
+      }
+    });
 
     newGameBtn.addEventListener("click", startNewGame);
 
