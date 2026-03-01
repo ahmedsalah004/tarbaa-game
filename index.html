@@ -438,6 +438,105 @@
       font-size: 0.95rem;
     }
 
+    .admin-panel {
+      background: var(--panel);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 16px;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .admin-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      color: #e2e8f0;
+    }
+
+    .admin-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .manual-categories {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+    }
+
+    .manual-categories.disabled {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .lifelines {
+      border-top: 1px solid rgba(148, 163, 184, 0.36);
+      padding-top: 12px;
+      display: grid;
+      gap: 10px;
+      text-align: right;
+    }
+
+    .lifeline-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .lifeline-btn {
+      background: linear-gradient(140deg, #0369a1, #1d4ed8);
+      border: 1px solid rgba(186, 230, 253, 0.35);
+      font-weight: 700;
+    }
+
+    .lifeline-btn.used {
+      opacity: 0.4;
+      filter: grayscale(0.55);
+      cursor: not-allowed;
+    }
+
+    .lifeline-output {
+      min-height: 30px;
+      color: #bfdbfe;
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+
+    .options-list {
+      list-style: decimal;
+      margin: 6px 24px 0 0;
+      display: grid;
+      gap: 6px;
+    }
+
+    .friend-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.88);
+      display: none;
+      place-items: center;
+      border-radius: 20px;
+      text-align: center;
+      z-index: 20;
+    }
+
+    .friend-overlay.show {
+      display: grid;
+    }
+
+    .friend-overlay-content {
+      display: grid;
+      gap: 8px;
+      color: #fef3c7;
+      font-weight: 800;
+      font-size: 1.25rem;
     .turn-indicator {
       background: rgba(30, 41, 59, 0.8);
       border: 1px solid rgba(148, 163, 184, 0.35);
@@ -605,16 +704,40 @@
       </div>
     </div>
 
+    <div class="admin-panel">
+      <div class="admin-row">
+        <strong>إعداد الفئات (5 فئات لكل لعبة):</strong>
+        <label><input type="radio" name="categoryMode" value="random" checked> عشوائي (5 فئات)</label>
+        <label><input type="radio" name="categoryMode" value="manual"> اختيار يدوي (5 فئات)</label>
+      </div>
+      <div class="manual-categories disabled" id="manualCategories"></div>
+      <p class="note" id="categoryModeNote">الوضع الحالي: اختيار عشوائي لخمس فئات.</p>
+    </div>
+
     <div class="board" id="board"></div>
     <p class="note">اضغط على أي مربع لعرض السؤال، ثم أظهر الإجابة وحدّث نقاط الفريق الفائز.</p>
   </div>
 
   <div class="modal" id="modal">
-    <div class="dialog">
+    <div class="dialog" id="dialog">
+      <div class="friend-overlay" id="friendOverlay">
+        <div class="friend-overlay-content">
+          <div>اتصل بصديقك الآن</div>
+          <div id="friendCountdown">15</div>
+        </div>
+      </div>
       <h2 id="modalTitle"></h2>
       <p class="question" id="questionText"></p>
       <p class="timer-display" id="timerDisplay">الوقت المتبقي: 15 ثانية</p>
       <p class="answer" id="answerText"></p>
+      <div class="lifelines">
+        <div class="lifeline-buttons">
+          <button class="lifeline-btn" id="lifelineOptionsBtn">٤ خيارات</button>
+          <button class="lifeline-btn" id="lifelineFriendBtn">اتصل بصديق</button>
+          <button class="lifeline-btn" id="lifelineStrongHintBtn">تلميح قوي</button>
+        </div>
+        <div class="lifeline-output" id="lifelineOutput"></div>
+      </div>
       <div class="dialog-actions">
         <button class="primary" id="showAnswerBtn">إظهار الإجابة</button>
         <button class="award" id="correctBtn" hidden>صحيح</button>
@@ -814,7 +937,41 @@
         { q: "من مؤلف (الكوميديا الإلهية)؟", a: "دانتي أليغييري", difficulty: 5 },
         { q: "ما اسم الحركة الفنية التي قادها بيكاسو؟", a: "التكعيبية", difficulty: 5 },
         { q: "في أي عام أقيمت أول بطولة كأس عالم لكرة القدم؟", a: "1930", difficulty: 5 }
+      ],
+      "السيرة النبوية": [
+        { q: "في أي مدينة وُلد النبي محمد ﷺ؟", a: "مكة المكرمة", difficulty: 1, hint: "ليست المدينة المنورة" },
+        { q: "ما اسم مرضعة النبي ﷺ؟", a: "حليمة السعدية", difficulty: 2 },
+        { q: "ما اسم الغار الذي كان يتعبد فيه النبي ﷺ قبل البعثة؟", a: "غار حراء", difficulty: 3 },
+        { q: "من هو الصحابي الذي رافق النبي ﷺ في الهجرة؟", a: "أبو بكر الصديق", difficulty: 4 },
+        { q: "ما اسم صلح السنة السادسة للهجرة مع قريش؟", a: "صلح الحديبية", difficulty: 5, hint2: "سُمّي باسم مكان قريب من مكة" }
+      ],
+      "مصر": [
+        { q: "ما عاصمة مصر؟", a: "القاهرة", difficulty: 1 },
+        { q: "ما النهر الذي يمر في مصر؟", a: "نهر النيل", difficulty: 2 },
+        { q: "في أي مدينة تقع مكتبة الإسكندرية؟", a: "الإسكندرية", difficulty: 3, hint: "مدينة ساحلية على البحر المتوسط" },
+        { q: "ما اسم القناة التي تربط البحر الأحمر بالمتوسط؟", a: "قناة السويس", difficulty: 4 },
+        { q: "ما اسم الهضبة التي تقع عليها أهرامات الجيزة؟", a: "هضبة الجيزة", difficulty: 5 }
+      ],
+      "ماركات": [
+        { q: "ما الشركة المصنعة لهواتف آيفون؟", a: "آبل", difficulty: 1 },
+        { q: "ما الدولة الأصلية لعلامة أديداس؟", a: "ألمانيا", difficulty: 2 },
+        { q: "ما الشركة المالكة لعلامة إنستغرام؟", a: "ميتا", difficulty: 3 },
+        { q: "ما الماركة الشهيرة بشعار النجمة الثلاثية في السيارات؟", a: "مرسيدس", difficulty: 4 },
+        { q: "ما الشركة التي طورت جهاز بلايستيشن؟", a: "سوني", difficulty: 5, hint2: "شركة يابانية معروفة في الإلكترونيات" }
       ]
+    };
+
+    const questionBankMeta = {
+      distractors: {
+        "القرآن الكريم": ["سورة البقرة", "سورة الكهف", "سورة يس", "سورة الإخلاص", "سورة الرحمن", "سورة النساء"],
+        "التاريخ الإسلامي": ["صلاح الدين الأيوبي", "الأندلس", "معركة اليرموك", "الخلافة العباسية", "طارق بن زياد", "بغداد"],
+        "الجغرافيا": ["الخرطوم", "الرباط", "الجزائر", "جبال الألب", "المحيط الأطلسي", "بحر العرب"],
+        "العلوم والتقنية": ["النيتروجين", "أينشتاين", "الخلية", "المريخ", "البنسلين", "الجاذبية"],
+        "رياضة وثقافة عامة": ["برشلونة", "ريال مدريد", "باريس", "بيتهوفن", "طوكيو", "رونالدو"],
+        "السيرة النبوية": ["المدينة المنورة", "أم أيمن", "غار ثور", "عمر بن الخطاب", "غزوة بدر", "صلح الحديبية"],
+        "مصر": ["الأقصر", "أسوان", "قناة بنما", "دمياط", "متحف التحرير", "المنصورة"],
+        "ماركات": ["سامسونج", "نايكي", "غوغل", "تويوتا", "هواوي", "مايكروسوفت"]
+      }
     };
 
     const teams = [
@@ -828,6 +985,7 @@
     const boardEl = document.getElementById("board");
     const scoreboardEl = document.getElementById("scoreboard");
     const modal = document.getElementById("modal");
+    const dialog = document.getElementById("dialog");
     const modalTitle = document.getElementById("modalTitle");
     const questionText = document.getElementById("questionText");
     const answerText = document.getElementById("answerText");
@@ -844,6 +1002,14 @@
     const timerSettingLabel = document.getElementById("timerSettingLabel");
     const resetBtn = document.getElementById("resetBtn");
     const newGameBtn = document.getElementById("newGameBtn");
+    const manualCategoriesEl = document.getElementById("manualCategories");
+    const categoryModeNote = document.getElementById("categoryModeNote");
+    const lifelineOptionsBtn = document.getElementById("lifelineOptionsBtn");
+    const lifelineFriendBtn = document.getElementById("lifelineFriendBtn");
+    const lifelineStrongHintBtn = document.getElementById("lifelineStrongHintBtn");
+    const lifelineOutput = document.getElementById("lifelineOutput");
+    const friendOverlay = document.getElementById("friendOverlay");
+    const friendCountdown = document.getElementById("friendCountdown");
     const turnIndicator = document.getElementById("turnIndicator");
     const tvModeBtn = document.getElementById("tvModeBtn");
     const adminBtn = document.getElementById("adminBtn");
@@ -870,6 +1036,15 @@
 
     let activeTile = null;
     let activeQuestion = null;
+    let activeCategory = "";
+    let selectedCategoryMode = "random";
+    let manualSelectedCategories = new Set();
+    let activeFriendInterval = null;
+    const lifelinesState = {
+      options: false,
+      friend: false,
+      strongHint: false
+    };
     let timeRemaining = turnTimerSeconds;
     let timerInterval = null;
     let awaitingStealDecision = false;
@@ -893,8 +1068,34 @@
       return array[Math.floor(Math.random() * array.length)];
     }
 
+    function shuffleArray(array) {
+      const cloned = [...array];
+      for (let i = cloned.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cloned[i], cloned[j]] = [cloned[j], cloned[i]];
+      }
+      return cloned;
+    }
+
+    function getAllCategories() {
+      return Object.keys(questionBank);
+    }
+
+    function getCategoriesForGame() {
+      const allCategories = getAllCategories();
+      if (selectedCategoryMode === "manual") {
+        const manualList = [...manualSelectedCategories].filter((category) => allCategories.includes(category));
+        if (manualList.length === 5) {
+          return manualList;
+        }
+      }
+      return shuffleArray(allCategories).slice(0, 5);
+    }
+
     function buildGameDataFromPools() {
-      return Object.entries(questionBank).map(([category, pool]) => {
+      const categoriesForGame = getCategoriesForGame();
+      return categoriesForGame.map((category) => {
+        const pool = questionBank[category] || [];
         const selectedQuestions = [];
         const usedQuestions = new Set();
 
@@ -928,6 +1129,8 @@
           selectedQuestions.push({
             q: chosen.q,
             a: chosen.a,
+            hint: chosen.hint,
+            hint2: chosen.hint2,
             difficulty,
             points: getPointsForDifficulty(difficulty)
           });
@@ -935,6 +1138,91 @@
 
         return { category, questions: selectedQuestions };
       });
+    }
+
+    function detectAnswerType(answer) {
+      if (/\d/.test(answer)) return "الإجابة رقم أو سنة";
+      if (/مدينة|القاهرة|مكة|المدينة|الرياض|باريس|لندن|دمشق|بغداد|الإسكندرية/.test(answer)) return "الإجابة مدينة";
+      if (answer.includes(" ")) return "الإجابة من كلمتين أو أكثر";
+      return "الإجابة كلمة واحدة";
+    }
+
+    function buildStrongHint(answer) {
+      const trimmed = String(answer || "").trim();
+      const words = trimmed.split(/\s+/).filter(Boolean);
+      const firstWord = words[0] || "";
+      const firstLetter = firstWord ? firstWord[0] : "-";
+      const lettersCount = trimmed.replace(/\s+/g, "").length;
+      return `تبدأ بـ: ${firstLetter} — أول كلمة: ${firstWord || "غير متوفر"} — عدد الحروف: ${lettersCount}`;
+    }
+
+    function renderLifelinesState() {
+      const map = [
+        { btn: lifelineOptionsBtn, used: lifelinesState.options },
+        { btn: lifelineFriendBtn, used: lifelinesState.friend },
+        { btn: lifelineStrongHintBtn, used: lifelinesState.strongHint }
+      ];
+
+      map.forEach(({ btn, used }) => {
+        btn.disabled = used;
+        btn.classList.toggle("used", used);
+      });
+    }
+
+    function clearFriendOverlay() {
+      if (activeFriendInterval) {
+        clearInterval(activeFriendInterval);
+        activeFriendInterval = null;
+      }
+      friendOverlay.classList.remove("show");
+    }
+
+    function resetLifelinesOutput() {
+      lifelineOutput.innerHTML = "";
+      clearFriendOverlay();
+      renderLifelinesState();
+    }
+
+    function renderCategoryControls() {
+      const allCategories = getAllCategories();
+      if (manualSelectedCategories.size === 0) {
+        shuffleArray(allCategories).slice(0, 5).forEach((c) => manualSelectedCategories.add(c));
+      }
+
+      manualCategoriesEl.innerHTML = "";
+      allCategories.forEach((category) => {
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = manualSelectedCategories.has(category);
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) {
+            if (manualSelectedCategories.size >= 5) {
+              checkbox.checked = false;
+              return;
+            }
+            manualSelectedCategories.add(category);
+          } else {
+            manualSelectedCategories.delete(category);
+          }
+          updateCategoryModeNote();
+        });
+        label.appendChild(checkbox);
+        label.append(` ${category}`);
+        manualCategoriesEl.appendChild(label);
+      });
+
+      const isManual = selectedCategoryMode === "manual";
+      manualCategoriesEl.classList.toggle("disabled", !isManual);
+      updateCategoryModeNote();
+    }
+
+    function updateCategoryModeNote() {
+      if (selectedCategoryMode === "manual") {
+        categoryModeNote.textContent = `الوضع الحالي: اختيار يدوي (${manualSelectedCategories.size}/5).`;
+      } else {
+        categoryModeNote.textContent = "الوضع الحالي: اختيار عشوائي لخمس فئات.";
+      }
     }
 
     function renderScoreboard() {
@@ -1076,6 +1364,10 @@
       if (tile.classList.contains("used") || activeQuestion) return;
       activeTile = tile;
       activeQuestion = item;
+      activeCategory = category;
+
+      tile.classList.add("used");
+      tile.disabled = true;
       awaitingStealDecision = false;
 
       modalTitle.textContent = `${category} - ${item.points} نقطة`;
@@ -1084,6 +1376,7 @@
       answerText.classList.remove("show");
       showAnswerBtn.disabled = false;
       showAnswerBtn.textContent = "إظهار الإجابة";
+      resetLifelinesOutput();
       setScoringButtonsVisibility(false);
       setStealButtonsVisibility(false);
       closeBtn.hidden = false;
@@ -1136,6 +1429,67 @@
       modal.classList.remove("show");
       activeQuestion = null;
       activeTile = null;
+      activeCategory = "";
+      answerText.classList.remove("show");
+      resetLifelinesOutput();
+    }
+
+    function useLifelineOptions() {
+      if (!activeQuestion || lifelinesState.options) return;
+      const categoryPool = questionBankMeta.distractors[activeCategory] || [];
+      const sameCategoryAnswers = (questionBank[activeCategory] || []).map((item) => item.a);
+      const candidateDistractors = shuffleArray([...categoryPool, ...sameCategoryAnswers]);
+      const unique = new Set([activeQuestion.a]);
+
+      for (const candidate of candidateDistractors) {
+        if (unique.size >= 4) break;
+        if (!candidate || candidate === activeQuestion.a) continue;
+        unique.add(candidate);
+      }
+
+      const fallbackDistractors = ["غير متاح", "إجابة بديلة", "خيار آخر"];
+      for (const fallback of fallbackDistractors) {
+        if (unique.size >= 4) break;
+        unique.add(fallback);
+      }
+
+      const options = shuffleArray([...unique]).slice(0, 4);
+      lifelineOutput.innerHTML = `<div>خيارات المساعدة:</div><ol class="options-list">${options.map((opt) => `<li>${opt}</li>`).join("")}</ol>`;
+      lifelinesState.options = true;
+      renderLifelinesState();
+    }
+
+    function useLifelineFriend() {
+      if (!activeQuestion || lifelinesState.friend) return;
+      lifelinesState.friend = true;
+      renderLifelinesState();
+
+      let seconds = 15;
+      friendCountdown.textContent = String(seconds);
+      friendOverlay.classList.add("show");
+      clearFriendOverlay();
+      friendOverlay.classList.add("show");
+
+      activeFriendInterval = setInterval(() => {
+        seconds -= 1;
+        friendCountdown.textContent = String(Math.max(0, seconds));
+        if (seconds <= 0) {
+          clearFriendOverlay();
+        }
+      }, 1000);
+
+      const suggestion = activeQuestion.hint
+        ? `اقتراح الصديق: ${activeQuestion.hint}`
+        : `اقتراح الصديق: ${detectAnswerType(activeQuestion.a)}.`;
+      lifelineOutput.innerHTML = `<div>${suggestion}</div>`;
+    }
+
+    function useLifelineStrongHint() {
+      if (!activeQuestion || lifelinesState.strongHint) return;
+      const hintText = activeQuestion.hint2 || buildStrongHint(activeQuestion.a);
+      lifelineOutput.innerHTML = `<div>تلميح قوي: ${hintText}</div>`;
+      lifelinesState.strongHint = true;
+      renderLifelinesState();
       awaitingStealDecision = false;
       answerText.classList.remove("show");
       setScoringButtonsVisibility(false);
@@ -1194,9 +1548,23 @@
       }
     });
 
+    document.querySelectorAll('input[name="categoryMode"]').forEach((radio) => {
+      radio.addEventListener("change", () => {
+        selectedCategoryMode = radio.value;
+        renderCategoryControls();
+      });
+    });
+
+    lifelineOptionsBtn.addEventListener("click", useLifelineOptions);
+    lifelineFriendBtn.addEventListener("click", useLifelineFriend);
+    lifelineStrongHintBtn.addEventListener("click", useLifelineStrongHint);
+
     function startNewGame() {
       teams.forEach((team) => {
         team.score = 0;
+      });
+      Object.keys(lifelinesState).forEach((key) => {
+        lifelinesState[key] = false;
       });
       currentTurnTeamId = 0;
       currentGameData = buildGameDataFromPools();
@@ -1205,6 +1573,7 @@
       updateTurnIndicator();
       updateTimerSettingLabel();
       renderBoard();
+      renderLifelinesState();
     }
 
     function getExportJson() {
@@ -1368,6 +1737,7 @@
 
     newGameBtn.addEventListener("click", startNewGame);
 
+    renderCategoryControls();
     renderScoreboard();
     startNewGame();
   </script>
