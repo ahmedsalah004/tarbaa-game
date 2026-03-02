@@ -715,7 +715,7 @@
     .answer-cta { background: linear-gradient(140deg,#22c55e,#15803d); font-size:1.15rem; font-weight:800; padding:12px 16px; }
     .question-media { display: grid; gap: 8px; justify-items: center; }
     .question-media img,
-    .question-media video { max-width: 100%; width: auto; max-height: min(46vh, 420px); border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.35); }
+    .question-media video { max-width: 100%; width: auto; max-height: 50vh; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.35); }
     .question-media audio { width: min(100%, 460px); }
     .question-caption { color: var(--muted); font-size: 0.92rem; text-align: center; }
 
@@ -1281,7 +1281,10 @@
       const trimmed = value.trim();
       if (!trimmed) return false;
       if (/^https?:\/\//i.test(trimmed)) return true;
-      return !/^(?:javascript|data|vbscript|file):/i.test(trimmed);
+      if (/^\/\//.test(trimmed)) return false;
+      if (/^javascript:/i.test(trimmed)) return false;
+      if (/^[a-z][a-z\d+.-]*:/i.test(trimmed)) return false;
+      return true;
     }
 
     function normalizeQuestionType(value) {
@@ -1941,6 +1944,7 @@
 
     function validateQuestionBank(data) {
       const errors = [];
+      const allowedQuestionKeys = new Set(["id", "difficulty", "q", "a", "type", "mediaUrl", "caption"]);
       if (!data || typeof data !== "object" || Array.isArray(data)) {
         return ["البيانات ليست كائن JSON صالح لبنك الأسئلة."];
       }
@@ -1963,6 +1967,15 @@
             return;
           }
 
+          const unknownKeys = Object.keys(item).filter((key) => !allowedQuestionKeys.has(key));
+          if (unknownKeys.length) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: مفاتيح غير مدعومة (${unknownKeys.join(", ")}).`);
+          }
+
+          if (typeof item.id !== "string" || !item.id.trim()) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل id مطلوب.`);
+          }
+
           if (typeof item.q !== "string" || !item.q.trim()) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل q مطلوب.`);
           }
@@ -1972,17 +1985,19 @@
           if (!Number.isInteger(item.difficulty) || item.difficulty < 1 || item.difficulty > 5) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: difficulty يجب أن يكون بين 1 و 5.`);
           }
-          if (item.id !== undefined && (typeof item.id !== "string" || !item.id.trim())) {
-            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: إذا وُجد الحقل id فيجب أن يكون نصًا غير فارغ.`);
-          }
           if (item.type !== undefined && (typeof item.type !== "string" || !item.type.trim())) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل type (إن وُجد) يجب أن يكون نصًا غير فارغ.`);
           }
+          const normalizedType = normalizeQuestionType(item.type);
           if (item.type !== undefined) {
-            const normalizedType = String(item.type).trim().toLowerCase();
             if (!["text", "image", "audio", "video"].includes(normalizedType)) {
               errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل type يجب أن يكون text أو image أو audio أو video.`);
             }
+          }
+
+          const mediaUrl = typeof item.mediaUrl === "string" ? item.mediaUrl.trim() : "";
+          if (normalizedType !== "text" && !mediaUrl) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل mediaUrl مطلوب عندما يكون type ${normalizedType}.`);
           }
           if (item.mediaUrl !== undefined && (typeof item.mediaUrl !== "string" || !isSafeMediaUrl(item.mediaUrl))) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل mediaUrl (إن وُجد) يجب أن يكون رابط http(s) أو مسارًا نسبيًا صالحًا.`);
