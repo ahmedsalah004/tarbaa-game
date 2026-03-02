@@ -835,6 +835,7 @@
           </label>
           <button class="primary" id="saveSettingsBtn">حفظ الإعدادات</button>
           <button class="secondary" id="difficultyAuditBtn">فحص الصعوبة (4 و 5)</button>
+          <button class="secondary" id="questionCycleDemoBtn">تشغيل فحص دورة الأسئلة</button>
           <div class="lifeline-output" id="difficultyAuditOutput"></div>
         </div>
       </div>
@@ -853,7 +854,8 @@
       4: 400,
       5: 500
     };
-    const USED_QUESTIONS_STORAGE_KEY = "usedQuestions";
+    const USED_QUESTIONS_STORAGE_KEY = "usedQuestionIds";
+    const LEGACY_USED_QUESTIONS_STORAGE_KEY = "usedQuestions";
     const QUESTION_BANK_STORAGE_KEY = "tarbaa_question_bank";
 
     let questionBank = {
@@ -1136,18 +1138,50 @@
       replaceQuestionBank(merged);
     }
 
-    function loadUsedQuestionsByCategory() {
+    function loadUsedQuestionIds() {
       try {
         const parsed = JSON.parse(localStorage.getItem(USED_QUESTIONS_STORAGE_KEY) || "{}");
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-        return parsed;
+        if (Array.isArray(parsed)) {
+          return new Set(parsed.map((id) => String(id).trim()).filter(Boolean));
+        }
       } catch (error) {
-        return {};
+        // Ignore and try migration below.
       }
+
+      try {
+        const legacyParsed = JSON.parse(localStorage.getItem(LEGACY_USED_QUESTIONS_STORAGE_KEY) || "{}");
+        if (legacyParsed && typeof legacyParsed === "object" && !Array.isArray(legacyParsed)) {
+          const migrated = Object.values(legacyParsed)
+            .flatMap((ids) => (Array.isArray(ids) ? ids : []))
+            .map((id) => String(id).trim())
+            .filter(Boolean);
+          return new Set(migrated);
+        }
+      } catch (error) {
+        return new Set();
+      }
+
+      return new Set();
     }
 
-    function saveUsedQuestionsByCategory(data) {
-      localStorage.setItem(USED_QUESTIONS_STORAGE_KEY, JSON.stringify(data));
+    function saveUsedQuestionIds(usedQuestionIds) {
+      localStorage.setItem(USED_QUESTIONS_STORAGE_KEY, JSON.stringify([...usedQuestionIds]));
+    }
+
+    function getAllValidQuestions() {
+      const allQuestions = [];
+      Object.entries(questionBank).forEach(([category, items]) => {
+        (items || []).forEach((item) => {
+          if (item && item.id && item.q && item.a) {
+            allQuestions.push({
+              ...item,
+              category,
+              difficulty: Number(item.difficulty)
+            });
+          }
+        });
+      });
+      return allQuestions;
     }
 
     questionBank = normalizeQuestionBank(questionBank);
@@ -1217,6 +1251,7 @@
     const stealModeSelect = document.getElementById("stealModeSelect");
     const saveSettingsBtn = document.getElementById("saveSettingsBtn");
     const difficultyAuditBtn = document.getElementById("difficultyAuditBtn");
+    const questionCycleDemoBtn = document.getElementById("questionCycleDemoBtn");
     const difficultyAuditOutput = document.getElementById("difficultyAuditOutput");
 
     const gameSettings = {
@@ -1305,39 +1340,48 @@
 
     function buildGameDataFromPools() {
       const categoriesForGame = getCategoriesForGame();
-      const usedQuestionsByCategory = loadUsedQuestionsByCategory();
-      const gameData = categoriesForGame.map((category) => {
-        const pool = (questionBank[category] || []).filter((item) => item.id && item.q && item.a);
-        const selectedQuestions = [];
-        let categoryUsedIds = new Set(usedQuestionsByCategory[category] || []);
-        let unusedPool = pool.filter((item) => !categoryUsedIds.has(item.id));
+      const usedQuestionIds = loadUsedQuestionIds();
+      const usedInThisGame = new Set();
+      const allQuestions = getAllValidQuestions();
+      let didResetUsedQuestions = false;
 
-        if (unusedPool.length < DIFFICULTIES.length) {
-          categoryUsedIds = new Set();
-          unusedPool = [...pool];
+      function getUnusedCandidates(filterFn) {
+        return allQuestions.filter((item) => {
+          if (usedQuestionIds.has(item.id) || usedInThisGame.has(item.id)) return false;
+          return filterFn(item);
+        });
+      }
+
+      function pickQuestionForSlot(category, difficulty) {
+        const filterChains = [
+          (item) => item.category === category && item.difficulty === difficulty,
+          (item) => item.category === category,
+          (item) => item.difficulty === difficulty,
+          () => true
+        ];
+
+        for (const filterFn of filterChains) {
+          const candidates = getUnusedCandidates(filterFn);
+          if (candidates.length > 0) return pickRandom(candidates);
         }
 
-        const usedThisRound = new Set();
+        if (!didResetUsedQuestions) {
+          usedQuestionIds.clear();
+          didResetUsedQuestions = true;
+          return pickQuestionForSlot(category, difficulty);
+        }
+
+        return null;
+      }
+
+      const gameData = categoriesForGame.map((category) => {
+        const selectedQuestions = [];
 
         DIFFICULTIES.forEach((difficulty) => {
-          const candidates = unusedPool.filter(
-            (item) => item.difficulty === difficulty && !usedThisRound.has(item.id)
-          );
-
-          let chosen = null;
-
-          if (candidates.length === 0) {
-            console.error(`Missing questions for category "${category}" at difficulty ${difficulty}. Falling back to any unused question.`);
-            const fallbackCandidates = unusedPool.filter(
-              (item) => !usedThisRound.has(item.id)
-            );
-            chosen = pickRandom(fallbackCandidates);
-          } else {
-            chosen = pickRandom(candidates);
-          }
+          let chosen = pickQuestionForSlot(category, difficulty);
 
           if (!chosen) {
-            console.error(`No unused fallback question available for category "${category}".`);
+            console.error(`No available question for category "${category}" difficulty ${difficulty}.`);
             chosen = {
               id: `${sanitizeIdPart(category)}_missing_${difficulty}`,
               q: `تعذر تحميل سؤال لهذا المربع (${category}).`,
@@ -1346,7 +1390,8 @@
             };
           }
 
-          usedThisRound.add(chosen.id);
+          usedInThisGame.add(chosen.id);
+          usedQuestionIds.add(chosen.id);
           selectedQuestions.push({
             id: chosen.id,
             q: chosen.q,
@@ -1360,12 +1405,10 @@
             points: getPointsForDifficulty(difficulty)
           });
         });
-
-        usedQuestionsByCategory[category] = [...new Set([...(usedQuestionsByCategory[category] || []), ...selectedQuestions.map((item) => item.id)])];
         return { category, questions: selectedQuestions };
       });
 
-      saveUsedQuestionsByCategory(usedQuestionsByCategory);
+      saveUsedQuestionIds(usedQuestionIds);
       return gameData;
     }
 
@@ -2034,6 +2077,7 @@
     });
 
     difficultyAuditBtn.addEventListener("click", renderDifficultyAudit);
+    questionCycleDemoBtn.addEventListener("click", runQuestionCycleSelfCheck);
 
     closeAdminBtn.addEventListener("click", () => adminModal.classList.remove("show"));
 
@@ -2116,6 +2160,60 @@
         .map((row) => `<li><span class="choice-label">(${row.difficulty})</span><span>${row.category}: ${row.question}</span></li>`)
         .join("");
       difficultyAuditOutput.innerHTML = `<div>نتيجة فحص الصعوبة:</div><ol class="options-list">${html}</ol>`;
+    }
+
+
+    function runQuestionCycleSelfCheck() {
+      const mappingOk = DIFFICULTIES.every((difficulty) => getPointsForDifficulty(difficulty) === difficulty * 100);
+
+      const originalCategoriesForGame = getCategoriesForGame;
+      const allCategories = getAllCategories();
+      getCategoriesForGame = () => allCategories.slice(0, Math.min(5, allCategories.length));
+
+      const usedBefore = loadUsedQuestionIds();
+      saveUsedQuestionIds(new Set());
+      const localUsed = new Set();
+      const seenIds = new Set();
+      let repeatBeforeExhaustion = false;
+      let exhaustedAtGame = null;
+      let resetWorked = false;
+
+      const selectedCategories = new Set(getCategoriesForGame());
+      const capacity = getAllValidQuestions().filter((item) => selectedCategories.has(item.category)).length;
+
+      for (let gameIndex = 1; gameIndex <= 12; gameIndex += 1) {
+        const roundIds = [];
+        const gameData = buildGameDataFromPools();
+        gameData.forEach((column) => {
+          column.questions.forEach((question) => roundIds.push(question.id));
+        });
+
+        for (const id of roundIds) {
+          if (localUsed.has(id) && exhaustedAtGame === null) {
+            repeatBeforeExhaustion = true;
+          }
+          localUsed.add(id);
+          if (seenIds.has(id) && exhaustedAtGame !== null) {
+            resetWorked = true;
+          }
+          seenIds.add(id);
+        }
+
+        if (exhaustedAtGame === null && localUsed.size >= capacity) {
+          exhaustedAtGame = gameIndex;
+        }
+      }
+
+      getCategoriesForGame = originalCategoriesForGame;
+      saveUsedQuestionIds(usedBefore);
+
+      const checks = [
+        `${mappingOk ? "✅" : "❌"} difficulty→points: ${mappingOk ? "PASS" : "FAIL"}`,
+        `${!repeatBeforeExhaustion ? "✅" : "❌"} no repeats before exhaustion: ${!repeatBeforeExhaustion ? "PASS" : "FAIL"}`,
+        `${(exhaustedAtGame !== null && resetWorked) ? "✅" : "⚠️"} reset after exhaustion: ${(exhaustedAtGame !== null && resetWorked) ? "PASS" : "Needs larger bank/sample"}`
+      ];
+
+      difficultyAuditOutput.innerHTML = `<div>نتيجة فحص دورة الأسئلة:</div><ol class="options-list">${checks.map((line) => `<li>${line}</li>`).join("")}</ol>`;
     }
 
     saveSettingsBtn.addEventListener("click", () => {
