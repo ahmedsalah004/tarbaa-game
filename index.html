@@ -713,7 +713,7 @@
         <div class="turn-indicator" id="turnIndicator">الدور: الفريق 1</div>
         <div class="timer-settings">
           <button id="timerPlusBtn" aria-label="زيادة وقت المؤقت">+</button>
-          <span id="timerSettingLabel">الوقت: 15 ثانية</span>
+          <span id="timerSettingLabel">الوقت: 60 ثانية</span>
           <button id="timerMinusBtn" aria-label="تقليل وقت المؤقت">-</button>
         </div>
       </div>
@@ -743,7 +743,7 @@
       </div>
       <h2 id="modalTitle"></h2>
       <p class="question" id="questionText"></p>
-      <p class="timer-display" id="timerDisplay">الوقت المتبقي: 15 ثانية</p>
+      <p class="timer-display" id="timerDisplay">الوقت المتبقي: 60 ثانية</p>
       <p class="answer" id="answerText"></p>
       <div class="lifelines">
         <div class="lifeline-buttons">
@@ -1175,7 +1175,7 @@
 
     let currentGameData = [];
     let currentTurnTeamId = 0;
-    let turnTimerSeconds = 15;
+    let turnTimerSeconds = 60;
 
     let activeTile = null;
     let activeQuestion = null;
