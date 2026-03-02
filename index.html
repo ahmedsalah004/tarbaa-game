@@ -713,6 +713,11 @@
     .timer-track { width:100%; height:12px; background:#1f2937; border-radius:999px; overflow:hidden; }
     .timer-progress { width:100%; height:100%; background:linear-gradient(90deg,#22c55e,#eab308,#ef4444); transition:width .35s; }
     .answer-cta { background: linear-gradient(140deg,#22c55e,#15803d); font-size:1.15rem; font-weight:800; padding:12px 16px; }
+    .question-media { display: grid; gap: 8px; justify-items: center; }
+    .question-media img,
+    .question-media video { max-width: 100%; width: auto; max-height: min(46vh, 420px); border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.35); }
+    .question-media audio { width: min(100%, 460px); }
+    .question-caption { color: var(--muted); font-size: 0.92rem; text-align: center; }
 
   </style>
 </head>
@@ -766,6 +771,8 @@
       <div class="timer-track"><div class="timer-progress" id="timerProgress"></div></div>
       <p class="timer-display" id="timerDisplay">الوقت المتبقي: 60 ثانية</p>
       <p class="question" id="questionText"></p>
+      <div class="question-media" id="questionMedia" hidden></div>
+      <p class="question-caption" id="questionCaption" hidden></p>
       <button class="answer-cta" id="answerCtaBtn">إجابة الفريق</button>
       <p class="answer" id="answerText"></p>
       <div class="lifelines">
@@ -1099,6 +1106,9 @@
           }
 
           normalizedItem.id = uniqueId;
+          normalizedItem.type = normalizeQuestionType(normalizedItem.type);
+          normalizedItem.mediaUrl = typeof normalizedItem.mediaUrl === "string" ? normalizedItem.mediaUrl.trim() : "";
+          normalizedItem.caption = typeof normalizedItem.caption === "string" ? normalizedItem.caption.trim() : "";
           usedIds.add(uniqueId);
           return normalizedItem;
         });
@@ -1114,10 +1124,7 @@
     function replaceQuestionBank(newQuestionBank) {
       questionBank = normalizeQuestionBank(newQuestionBank);
       manualSelectedCategories = new Set();
-      renderCategoryControls();
-      closeModal();
-      currentGameData = buildGameDataFromPools();
-      renderBoard();
+      applyCategorySelectionAndRender();
       saveQuestionBankToStorage();
     }
 
@@ -1166,6 +1173,8 @@
     const dialog = document.getElementById("dialog");
     const modalTitle = document.getElementById("modalTitle");
     const questionText = document.getElementById("questionText");
+    const questionMedia = document.getElementById("questionMedia");
+    const questionCaption = document.getElementById("questionCaption");
     const answerText = document.getElementById("answerText");
     const timerDisplay = document.getElementById("timerDisplay");
     const showAnswerBtn = document.getElementById("showAnswerBtn");
@@ -1267,6 +1276,19 @@
       return Object.keys(questionBank);
     }
 
+    function isSafeMediaUrl(value) {
+      if (typeof value !== "string") return false;
+      const trimmed = value.trim();
+      if (!trimmed) return false;
+      if (/^https?:\/\//i.test(trimmed)) return true;
+      return !/^(?:javascript|data|vbscript|file):/i.test(trimmed);
+    }
+
+    function normalizeQuestionType(value) {
+      const normalizedType = typeof value === "string" ? value.trim().toLowerCase() : "";
+      return ["text", "image", "audio", "video"].includes(normalizedType) ? normalizedType : "text";
+    }
+
     function getCategoriesForGame() {
       const allCategories = getAllCategories();
       if (selectedCategoryMode === "manual") {
@@ -1328,7 +1350,9 @@
             a: chosen.a,
             hint: chosen.hint,
             hint2: chosen.hint2,
-            type: chosen.type,
+            type: normalizeQuestionType(chosen.type),
+            mediaUrl: typeof chosen.mediaUrl === "string" ? chosen.mediaUrl.trim() : "",
+            caption: typeof chosen.caption === "string" ? chosen.caption.trim() : "",
             difficulty,
             points: getPointsForDifficulty(difficulty)
           });
@@ -1482,7 +1506,7 @@
           } else {
             manualSelectedCategories.delete(category);
           }
-          updateCategoryModeNote();
+          applyCategorySelectionAndRender();
         });
         label.appendChild(checkbox);
         label.append(` ${category}`);
@@ -1492,6 +1516,22 @@
       const isManual = selectedCategoryMode === "manual";
       manualCategoriesEl.classList.toggle("disabled", !isManual);
       updateCategoryModeNote();
+    }
+
+    function applyCategorySelectionAndRender() {
+      const checkedMode = document.querySelector('input[name="categoryMode"]:checked');
+      selectedCategoryMode = checkedMode ? checkedMode.value : "random";
+      const allCategories = getAllCategories();
+      manualSelectedCategories = new Set([...manualSelectedCategories].filter((category) => allCategories.includes(category)));
+
+      if (selectedCategoryMode === "random" && manualSelectedCategories.size === 0) {
+        shuffleArray(allCategories).slice(0, 5).forEach((c) => manualSelectedCategories.add(c));
+      }
+
+      renderCategoryControls();
+      closeModal();
+      currentGameData = buildGameDataFromPools();
+      renderBoard();
     }
 
     function updateCategoryModeNote() {
@@ -1643,6 +1683,7 @@
 
         modalTitle.textContent = `${category} - ${item.points} نقطة`;
         questionText.textContent = item.q;
+        renderQuestionMedia(item);
         answerText.textContent = `الإجابة: ${item.a}`;
         answerText.classList.remove("show");
         showAnswerBtn.disabled = false;
@@ -1654,6 +1695,41 @@
         modal.classList.add("show");
         startQuestionTimer(true);
       }, 260);
+    }
+
+    function renderQuestionMedia(item) {
+      questionMedia.innerHTML = "";
+      questionMedia.hidden = true;
+
+      const type = normalizeQuestionType(item?.type);
+      const mediaUrl = typeof item?.mediaUrl === "string" ? item.mediaUrl.trim() : "";
+      const safeMediaUrl = isSafeMediaUrl(mediaUrl) ? mediaUrl : "";
+
+      if (type !== "text" && safeMediaUrl) {
+        let mediaElement = null;
+        if (type === "image") {
+          mediaElement = document.createElement("img");
+          mediaElement.alt = item?.q || "Question image";
+        } else if (type === "audio") {
+          mediaElement = document.createElement("audio");
+          mediaElement.controls = true;
+          mediaElement.preload = "metadata";
+        } else if (type === "video") {
+          mediaElement = document.createElement("video");
+          mediaElement.controls = true;
+          mediaElement.preload = "metadata";
+        }
+
+        if (mediaElement) {
+          mediaElement.src = safeMediaUrl;
+          questionMedia.appendChild(mediaElement);
+          questionMedia.hidden = false;
+        }
+      }
+
+      const caption = typeof item?.caption === "string" ? item.caption.trim() : "";
+      questionCaption.textContent = caption;
+      questionCaption.hidden = !caption;
     }
 
     function markActiveTileUsed() {
@@ -1823,7 +1899,7 @@
     document.querySelectorAll('input[name="categoryMode"]').forEach((radio) => {
       radio.addEventListener("change", () => {
         selectedCategoryMode = radio.value;
-        renderCategoryControls();
+        applyCategorySelectionAndRender();
       });
     });
 
@@ -1840,12 +1916,11 @@
       });
       currentTurnTeamId = 0;
       turnTimerSeconds = gameSettings.timerSeconds;
-      currentGameData = buildGameDataFromPools();
+      applyCategorySelectionAndRender();
       closeModal();
       renderScoreboard();
       updateTurnIndicator();
       updateTimerSettingLabel();
-      renderBoard();
       renderLifelinesState();
     }
 
@@ -1902,6 +1977,18 @@
           }
           if (item.type !== undefined && (typeof item.type !== "string" || !item.type.trim())) {
             errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل type (إن وُجد) يجب أن يكون نصًا غير فارغ.`);
+          }
+          if (item.type !== undefined) {
+            const normalizedType = String(item.type).trim().toLowerCase();
+            if (!["text", "image", "audio", "video"].includes(normalizedType)) {
+              errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل type يجب أن يكون text أو image أو audio أو video.`);
+            }
+          }
+          if (item.mediaUrl !== undefined && (typeof item.mediaUrl !== "string" || !isSafeMediaUrl(item.mediaUrl))) {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل mediaUrl (إن وُجد) يجب أن يكون رابط http(s) أو مسارًا نسبيًا صالحًا.`);
+          }
+          if (item.caption !== undefined && typeof item.caption !== "string") {
+            errors.push(`الفئة "${category}" السؤال رقم ${idx + 1}: الحقل caption (إن وُجد) يجب أن يكون نصًا.`);
           }
         });
       });
